@@ -1,128 +1,200 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { postsAPI } from '../services/api';
 
-async function fetchFeed(year, semester) {
-  const params = new URLSearchParams({ year: String(year), semester: String(semester) });
-  const res = await fetch(`/api/posts/feed?${params.toString()}`);
-  if (!res.ok) throw new Error('Failed to load feed');
-  return res.json();
-}
-
-function PostCard({ item }) {
-  return (
-    <div
-      style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '8px',
-        padding: '1.25rem',
-        marginBottom: '1rem',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        borderLeft: '4px solid #667eea',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        cursor: 'pointer'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
-        <h3 style={{ margin: '0', color: '#1f2937', fontSize: '1.1rem' }}>{item.post?.title}</h3>
-        <span style={{ backgroundColor: '#dbeafe', color: '#1e40af', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
-          {item.post?.category || 'study'}
-        </span>
-      </div>
-
-      <p style={{ margin: '0.5rem 0 0 0', color: '#4b5563', lineHeight: '1.6' }}>{item.post?.body}</p>
-
-      {item.post?.tags && item.post.tags.length > 0 && (
-        <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {item.post.tags.map((tag, idx) => (
-            <span key={idx} style={{ backgroundColor: '#f3f4f6', color: '#666', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem' }}>
-              #{tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #e5e7eb', fontSize: '0.85rem', color: '#999' }}>
-        by <strong>{item.post?.author?.name || 'Anonymous'}</strong> • {new Date(item.createdAt).toLocaleDateString()}
-      </div>
-    </div>
-  );
-}
-
-function Home({ user }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function Home() {
+  const { user } = useAuth();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [category, setCategory] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    fetchFeed(user.year, user.semester)
-      .then((data) => {
-        setItems(data || []);
-        setError(null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [user]);
+    fetchPosts();
+  }, [category, page, search]);
 
-  const yourPosts = items.filter((i) => i.year === user.year && i.semester === user.semester);
-  const commonPosts = items.filter((i) => !i.year && !i.semester);
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const params = { page, limit: 10 };
+      if (category) params.category = category;
+      if (search) params.search = search;
+
+      const response = await postsAPI.getAll(params);
+      setPosts(response.data.posts);
+      setTotalPages(response.data.pagination.pages);
+    } catch (err) {
+      setError('Failed to load posts');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (postId) => {
+    try {
+      await postsAPI.like(postId);
+      fetchPosts();
+    } catch (err) {
+      console.error('Error liking post:', err);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '2rem' }}>
-          <p style={{ color: '#667eea', fontSize: '1.1rem' }}>Loading posts...</p>
+    <div className="min-h-screen bg-light-beige">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="section-title">Academic Feed</h1>
+          <p className="text-gray-600">Connect with students, share knowledge, and find resources</p>
         </div>
-      )}
 
-      {error && (
-        <div style={{ backgroundColor: '#fee', padding: '1rem', borderRadius: '8px', color: '#c33', marginBottom: '2rem' }}>
-          Error: {error}
-        </div>
-      )}
-
-      {!loading && !error && (
-        <>
-          <section style={{ marginBottom: '3rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0, color: '#1f2937' }}>Your Posts</h2>
-              <span style={{ backgroundColor: '#e0e7ff', color: '#667eea', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 600 }}>
-                Year {user.year} • Sem {user.semester}
-              </span>
+        {/* Filters */}
+        <div className="card mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Search</label>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search posts..."
+                className="input-field"
+              />
             </div>
 
-            {yourPosts.length === 0 ? (
-              <div style={{ backgroundColor: '#f0f4ff', padding: '2rem', borderRadius: '8px', textAlign: 'center', color: '#667eea' }}>
-                <p style={{ margin: 0, fontSize: '1.05rem' }}>No posts yet for your batch. Be the first to post!</p>
-              </div>
-            ) : (
-              yourPosts.map((item) => <PostCard key={item._id} item={item} />)
-            )}
-          </section>
+            <div>
+              <label className="block text-sm font-medium mb-2">Category</label>
+              <select
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  setPage(1);
+                }}
+                className="input-field"
+              >
+                <option value="">All Categories</option>
+                <option value="study">Study</option>
+                <option value="lost">Lost Items</option>
+                <option value="found">Found Items</option>
+              </select>
+            </div>
 
-          <section>
-            <h2 style={{ color: '#1f2937', marginBottom: '1.5rem' }}>Common Posts</h2>
-
-            {commonPosts.length === 0 ? (
-              <div style={{ backgroundColor: '#f0f4ff', padding: '2rem', borderRadius: '8px', textAlign: 'center', color: '#667eea' }}>
-                <p style={{ margin: 0, fontSize: '1.05rem' }}>No common posts yet.</p>
+            {user && (
+              <div className="flex items-end">
+                <Link
+                  to="/create"
+                  className="btn-primary w-full text-center"
+                >
+                  New Post
+                </Link>
               </div>
-            ) : (
-              commonPosts.map((item) => <PostCard key={item._id} item={item} />)
             )}
-          </section>
-        </>
-      )}
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Posts List */}
+        <div className="space-y-6">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading posts...</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="card text-center py-12">
+              <p className="text-gray-500">No posts found. Be the first to create one!</p>
+            </div>
+          ) : (
+            posts.map(post => (
+              <Link key={post._id} to={`/post/${post._id}`} className="block">
+                <div className="card hover:shadow-lg transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h2 className="text-xl font-bold text-primary-teal hover:text-secondary-teal">
+                        {post.title}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        by {post.author?.name} • {new Date(post.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="badge-primary">{post.category}</span>
+                  </div>
+
+                  <p className="text-gray-700 mb-4 line-clamp-3">{post.body}</p>
+
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {post.tags?.map(tag => (
+                      <span key={tag} className="badge-secondary">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between items-center text-sm text-gray-500">
+                    <div className="flex gap-4">
+                      <span>👁 {post.views} views</span>
+                      <span>❤️ {post.likes?.length || 0} likes</span>
+                    </div>
+                    {user && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleLike(post._id);
+                        }}
+                        className="text-primary-teal hover:text-secondary-teal font-semibold"
+                      >
+                        Like
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-8">
+            {page > 1 && (
+              <button
+                onClick={() => setPage(page - 1)}
+                className="btn-outline"
+              >
+                Previous
+              </button>
+            )}
+
+            <span className="flex items-center px-4">
+              Page {page} of {totalPages}
+            </span>
+
+            {page < totalPages && (
+              <button
+                onClick={() => setPage(page + 1)}
+                className="btn-outline"
+              >
+                Next
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-export default Home;

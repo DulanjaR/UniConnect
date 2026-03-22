@@ -5,19 +5,28 @@ const postSchema = new mongoose.Schema(
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     body: { type: String, required: true },
-    // academic or topic tags
     tags: [{ type: String }],
-    // category-based posting (currently only "study")
     category: {
       type: String,
-      enum: ['study'],
+      enum: ['study', 'lost', 'found'],
       required: true
     },
-    // image URL (e.g. from Cloudinary)
     imageUrl: { type: String },
-    isPublished: { type: Boolean, default: true }
+    isPublished: { type: Boolean, default: true },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    views: { type: Number, default: 0 },
+    acceptedAnswer: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment' },
+    searchKeywords: [{ type: String }],
+    year: { type: Number },
+    semester: { type: Number },
+    status: { type: String, default: 'active', enum: ['active', 'archived', 'deleted'] }
   },
   { timestamps: true }
 );
+
+// Index for search and filtering
+postSchema.index({ title: 'text', body: 'text', tags: 1, category: 1 });
+postSchema.index({ author: 1 });
+postSchema.index({ createdAt: -1 });
 
 export const Post = mongoose.model('Post', postSchema);

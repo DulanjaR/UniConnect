@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-teal: #1B4D6A;
+  --secondary-teal: #2c5f7f;
+  --accent-beige: #F5E6C8;
+  --light-beige: #FAF6F0;
+  --dark-text: #2d3748;
+}
+
+* {
+  @apply box-border;
+}
+
+body {
+  @apply bg-light-beige text-dark-text;
+}
+
+/* Utility classes */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-semibold transition-colors duration-200;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-teal text-white hover:bg-secondary-teal;
+  }
+
+  .btn-secondary {
+    @apply btn bg-accent-beige text-primary-teal hover:bg-yellow-200;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-primary-teal text-primary-teal hover:bg-primary-teal hover:text-white;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 border border-gray-100;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-teal;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold text-primary-teal mb-4;
+  }
+
+  .badge {
+    @apply inline-block px-3 py-1 rounded-full text-sm font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-teal text-white;
+  }
+
+  .badge-secondary {
+    @apply badge bg-accent-beige text-primary-teal;
+  }
+}

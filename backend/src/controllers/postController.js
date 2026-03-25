@@ -80,28 +80,33 @@ export const getPosts = async (req, res) => {
 export const getPostFeed = async (req, res) => {
   try {
     const { year, semester, page = 1, limit = 10 } = req.query;
+    const userId = req.user?.userId;
     const skip = (page - 1) * limit;
 
-    const filter = { status: 'active' };
+    let filter = { status: 'active' };
 
-    if (year || semester) {
-      const orConditions = [];
-      
-      if (year && semester) {
-        orConditions.push({ year: parseInt(year), semester: parseInt(semester) });
-        orConditions.push({ year: null, semester: null });
-      } else if (year) {
-        orConditions.push({ year: parseInt(year) });
-        orConditions.push({ year: null });
-      }
-
-      if (orConditions.length > 0) {
-        filter.$or = orConditions;
+    // If user specifies year/semester, filter by those
+    if (year && semester) {
+      filter.year = parseInt(year);
+      filter.semester = parseInt(semester);
+    } else if (userId) {
+      // Get user's year and semester for default filtering
+      try {
+        const { User } = await import('../models/User.js');
+        const user = await User.findById(userId);
+        
+        if (user && user.academicYear && user.semester) {
+          // Filter to show only posts from user's year and semester
+          filter.year = user.academicYear;
+          filter.semester = user.semester;
+        }
+      } catch (err) {
+        console.log('Could not fetch user for default year/semester filter:', err.message);
       }
     }
 
     const posts = await Post.find(filter)
-      .populate('author', 'name email profilePicture university')
+      .populate('author', 'name email profilePicture university academicYear semester')
       .sort('-createdAt')
       .skip(skip)
       .limit(parseInt(limit));

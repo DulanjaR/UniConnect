@@ -135,6 +135,16 @@ export default function Home() {
                     <span className="badge-primary">{post.category}</span>
                   </div>
 
+                  {post.imageUrl && (
+                    <div className="mb-4">
+                      <img 
+                        src={post.imageUrl} 
+                        alt={post.title}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
+
                   <p className="text-gray-700 mb-4 line-clamp-3">{post.body}</p>
 
                   <div className="flex flex-wrap gap-2 mb-4">

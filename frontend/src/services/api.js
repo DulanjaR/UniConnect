@@ -9,6 +9,13 @@ export const postsAPI = {
   getById: (id) => axios.get(`${API_URL}/posts/${id}`),
   getByAuthor: (authorId) => axios.get(`${API_URL}/posts/author/${authorId}`),
   create: (data) => axios.post(`${API_URL}/posts`, data),
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return axios.post(`${API_URL}/posts/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
   update: (id, data) => axios.put(`${API_URL}/posts/${id}`, data),
   delete: (id) => axios.delete(`${API_URL}/posts/${id}`),
   like: (id) => axios.post(`${API_URL}/posts/${id}/like`),

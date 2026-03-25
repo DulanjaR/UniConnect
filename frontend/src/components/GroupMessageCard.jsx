@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { groupsAPI } from '../services/api';
 import GroupMessageComposer from './GroupMessageComposer';
 import GroupReplyThread from './GroupReplyThread';
+import { GROUP_MESSAGE_MAX_LENGTH } from '../utils/groupValidation';
 
 export default function GroupMessageCard({
   groupId,
@@ -58,6 +59,8 @@ export default function GroupMessageCard({
         <GroupMessageComposer
           initialValue={message.content}
           submitLabel="Save Message"
+          fieldLabel="Message"
+          maxLength={GROUP_MESSAGE_MAX_LENGTH}
           onSubmit={handleUpdate}
           onCancel={() => setEditing(false)}
         />

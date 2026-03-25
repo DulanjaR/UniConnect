@@ -1,8 +1,13 @@
 import { Group } from '../models/Group.js';
 import { GroupMember } from '../models/GroupMember.js';
+import { ensureObjectId } from '../utils/validation.js';
 
 export const loadGroupById = async (req, res, next) => {
   try {
+    if (!ensureObjectId(res, req.params.id, 'id', 'group id')) {
+      return;
+    }
+
     const group = await Group.findById(req.params.id).populate('createdBy', 'name email role');
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });

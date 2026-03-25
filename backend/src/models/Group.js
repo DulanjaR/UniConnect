@@ -2,8 +2,8 @@ import mongoose from 'mongoose';
 
 const groupSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, maxlength: 120 },
-    description: { type: String, trim: true, maxlength: 1000 },
+    name: { type: String, required: true, trim: true, minlength: 3, maxlength: 50 },
+    description: { type: String, trim: true, maxlength: 300 },
     image: { type: String, trim: true },
     privacy: {
       type: String,

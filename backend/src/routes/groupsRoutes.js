@@ -36,12 +36,12 @@ router.get('/', optionalAuthMiddleware, listGroups);
 router.get('/mine', authMiddleware, getMyGroups);
 router.post('/', authMiddleware, createGroup);
 
-router.get('/:id', optionalAuthMiddleware, getGroup);
+router.get('/:id', optionalAuthMiddleware, loadGroupById, getGroup);
 router.put('/:id', authMiddleware, loadGroupById, groupManagerMiddleware, updateGroup);
 router.delete('/:id', authMiddleware, loadGroupById, groupManagerMiddleware, deleteGroup);
 
-router.post('/:id/join', authMiddleware, joinGroup);
-router.post('/:id/leave', authMiddleware, leaveGroup);
+router.post('/:id/join', authMiddleware, loadGroupById, joinGroup);
+router.post('/:id/leave', authMiddleware, loadGroupById, leaveGroup);
 
 router.get('/:id/messages', optionalAuthMiddleware, loadGroupById, listGroupMessages);
 router.post('/:id/messages', authMiddleware, loadGroupById, groupMemberMiddleware, createGroupMessage);
@@ -60,7 +60,7 @@ router.post(
   toggleGroupMessageReplyLike
 );
 
-router.get('/:id/members', optionalAuthMiddleware, listGroupMembers);
+router.get('/:id/members', optionalAuthMiddleware, loadGroupById, listGroupMembers);
 router.post('/:id/members', authMiddleware, loadGroupById, groupManagerMiddleware, addGroupMember);
 router.delete('/:id/members/:userId', authMiddleware, loadGroupById, groupManagerMiddleware, removeGroupMember);
 router.patch('/:id/members/:userId/role', authMiddleware, loadGroupById, groupManagerMiddleware, updateGroupMemberRole);

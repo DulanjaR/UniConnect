@@ -8,6 +8,7 @@ import { Group } from '../models/Group.js';
 import { GroupMember } from '../models/GroupMember.js';
 import { GroupJoinRequest } from '../models/GroupJoinRequest.js';
 import { GroupMessage } from '../models/GroupMessage.js';
+import { ensureObjectId, validationError } from '../utils/validation.js';
 
 const parseNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -545,6 +546,12 @@ export const getAllGroups = async (req, res) => {
     const filter = {};
 
     if (privacy) {
+      if (!['public', 'private'].includes(privacy)) {
+        return validationError(res, {
+          privacy: 'Privacy must be either "public" or "private"'
+        });
+      }
+
       filter.privacy = privacy;
     }
 
@@ -582,6 +589,10 @@ export const getAllGroups = async (req, res) => {
 
 export const deleteAnyGroup = async (req, res) => {
   try {
+    if (!ensureObjectId(res, req.params.id, 'id', 'group id')) {
+      return;
+    }
+
     const group = await Group.findById(req.params.id).populate('createdBy', 'name email');
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });

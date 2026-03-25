@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { getApiErrorDetails, validateContent } from '../utils/groupValidation';
 
 export default function GroupMessageComposer({
   onSubmit,
   submitLabel = 'Post Message',
   placeholder = 'Write something to the group...',
   initialValue = '',
+  maxLength = 1000,
+  fieldLabel = 'Message',
   compact = false,
   disabled = false,
   onCancel
@@ -15,13 +18,18 @@ export default function GroupMessageComposer({
 
   useEffect(() => {
     setContent(initialValue);
+    setError('');
   }, [initialValue]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!content.trim()) {
-      setError('Content is required');
+    const validationMessage = validateContent(content, {
+      label: fieldLabel,
+      maxLength
+    });
+    if (validationMessage) {
+      setError(validationMessage);
       return;
     }
 
@@ -33,11 +41,14 @@ export default function GroupMessageComposer({
         setContent('');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit');
+      const { message, errors } = getApiErrorDetails(err);
+      setError(errors.content || message || 'Failed to submit');
     } finally {
       setSubmitting(false);
     }
   };
+
+  const characterCount = content.trim().length;
 
   return (
     <form onSubmit={handleSubmit} className={compact ? 'space-y-3' : 'card space-y-4'}>
@@ -45,10 +56,16 @@ export default function GroupMessageComposer({
       <textarea
         className={`input-field ${compact ? 'min-h-24' : 'min-h-32'}`}
         value={content}
-        onChange={(event) => setContent(event.target.value)}
+        onChange={(event) => {
+          setContent(event.target.value);
+          setError('');
+        }}
         placeholder={placeholder}
         disabled={disabled || submitting}
       />
+      <div className={`text-right text-xs ${characterCount > maxLength ? 'text-red-600' : 'text-gray-500'}`}>
+        {characterCount}/{maxLength}
+      </div>
       <div className="flex flex-wrap gap-3">
         <button className="btn-primary" type="submit" disabled={disabled || submitting}>
           {submitting ? 'Saving...' : submitLabel}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { groupsAPI } from '../services/api';
 import GroupMessageComposer from './GroupMessageComposer';
+import { GROUP_REPLY_MAX_LENGTH } from '../utils/groupValidation';
 
 export default function GroupReplyThread({
   groupId,
@@ -66,6 +67,8 @@ export default function GroupReplyThread({
           compact
           submitLabel="Post Reply"
           placeholder="Reply to this message..."
+          fieldLabel="Reply"
+          maxLength={GROUP_REPLY_MAX_LENGTH}
           onSubmit={handleCreateReply}
           onCancel={() => setShowComposer(false)}
         />
@@ -90,6 +93,8 @@ export default function GroupReplyThread({
                     compact
                     initialValue={reply.content}
                     submitLabel="Save Reply"
+                    fieldLabel="Reply"
+                    maxLength={GROUP_REPLY_MAX_LENGTH}
                     onSubmit={(content) => handleUpdateReply(reply._id, content)}
                     onCancel={() => setEditingReplyId(null)}
                   />

@@ -6,6 +6,13 @@ import { GroupMessage } from '../models/GroupMessage.js';
 import { User } from '../models/User.js';
 import { AdminLog } from '../models/AdminLog.js';
 import { createNotification } from '../utils/notifications.js';
+import {
+  ensureObjectId,
+  validateAddMemberPayload,
+  validateGroupPayload,
+  validateGroupRole,
+  validationError
+} from '../utils/validation.js';
 
 const parseNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
@@ -99,21 +106,13 @@ const getTargetUser = async (userId, email) => {
 
 export const createGroup = async (req, res) => {
   try {
-    const { name, description, image, privacy = 'public' } = req.body;
-
-    if (!name?.trim()) {
-      return res.status(400).json({ message: 'Group name is required' });
-    }
-
-    if (!['public', 'private'].includes(privacy)) {
-      return res.status(400).json({ message: 'Invalid group privacy value' });
+    const { errors, value } = validateGroupPayload(req.body);
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
     const group = await Group.create({
-      name: name.trim(),
-      description: description?.trim(),
-      image,
-      privacy,
+      ...value,
       createdBy: req.user.userId
     });
 
@@ -131,7 +130,7 @@ export const createGroup = async (req, res) => {
       group: payload
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
@@ -143,6 +142,12 @@ export const listGroups = async (req, res) => {
     const { search, privacy } = req.query;
 
     const conditions = [];
+
+    if (privacy && !['public', 'private'].includes(privacy)) {
+      return validationError(res, {
+        privacy: 'Privacy must be either "public" or "private"'
+      });
+    }
 
     if (search) {
       conditions.push({
@@ -217,11 +222,7 @@ export const getMyGroups = async (req, res) => {
 
 export const getGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id).populate('createdBy', 'name email profilePicture');
-
-    if (!group) {
-      return res.status(404).json({ message: 'Group not found' });
-    }
+    const group = req.group;
 
     const allowed = await canAccessPrivateGroup(group, req.user);
     if (!allowed) {
@@ -238,19 +239,22 @@ export const getGroup = async (req, res) => {
 
 export const updateGroup = async (req, res) => {
   try {
-    const { name, description, image, privacy } = req.body;
-
-    if (privacy && !['public', 'private'].includes(privacy)) {
-      return res.status(400).json({ message: 'Invalid group privacy value' });
+    const { errors, value } = validateGroupPayload(req.body, { partial: true });
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
     const group = await Group.findByIdAndUpdate(
       req.params.id,
       {
-        ...(name ? { name: name.trim() } : {}),
-        ...(description !== undefined ? { description: description?.trim() || '' } : {}),
-        ...(image !== undefined ? { image } : {}),
-        ...(privacy ? { privacy } : {})
+        ...(Object.prototype.hasOwnProperty.call(value, 'name') ? { name: value.name } : {}),
+        ...(Object.prototype.hasOwnProperty.call(value, 'description')
+          ? { description: value.description }
+          : {}),
+        ...(Object.prototype.hasOwnProperty.call(value, 'image') ? { image: value.image } : {}),
+        ...(Object.prototype.hasOwnProperty.call(value, 'privacy')
+          ? { privacy: value.privacy }
+          : {})
       },
       { new: true }
     ).populate('createdBy', 'name email profilePicture');
@@ -262,7 +266,7 @@ export const updateGroup = async (req, res) => {
       group: payload
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
@@ -293,11 +297,7 @@ export const deleteGroup = async (req, res) => {
 
 export const joinGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id).populate('createdBy', 'name email profilePicture');
-
-    if (!group) {
-      return res.status(404).json({ message: 'Group not found' });
-    }
+    const group = req.group;
 
     const existingMembership = await GroupMember.findOne({
       groupId: group._id,
@@ -305,7 +305,9 @@ export const joinGroup = async (req, res) => {
     });
 
     if (existingMembership) {
-      return res.status(400).json({ message: 'You are already a member of this group' });
+      return validationError(res, {
+        membership: 'You are already a member of this group'
+      });
     }
 
     const existingRequest = await GroupJoinRequest.findOne({
@@ -369,13 +371,8 @@ export const joinGroup = async (req, res) => {
 
 export const leaveGroup = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
-    if (!group) {
-      return res.status(404).json({ message: 'Group not found' });
-    }
-
     const membership = await GroupMember.findOne({
-      groupId: group._id,
+      groupId: req.group._id,
       userId: req.user.userId
     });
 
@@ -383,17 +380,19 @@ export const leaveGroup = async (req, res) => {
       return res.status(404).json({ message: 'You are not a member of this group' });
     }
 
-    const permission = await assertGroupAdminRemovalAllowed(group._id, req.user.userId);
+    const permission = await assertGroupAdminRemovalAllowed(req.group._id, req.user.userId);
     if (!permission.allowed) {
-      return res.status(400).json({ message: permission.message });
+      return validationError(res, {
+        membership: permission.message
+      });
     }
 
     await GroupMember.deleteOne({ _id: membership._id });
-    await GroupJoinRequest.deleteMany({ groupId: group._id, userId: req.user.userId });
+    await GroupJoinRequest.deleteMany({ groupId: req.group._id, userId: req.user.userId });
 
-    const remainingMembers = await GroupMember.countDocuments({ groupId: group._id });
+    const remainingMembers = await GroupMember.countDocuments({ groupId: req.group._id });
     if (remainingMembers === 0) {
-      await deleteGroupRecords(group._id);
+      await deleteGroupRecords(req.group._id);
       return res.json({ message: 'You left the group and it was archived because it had no members' });
     }
 
@@ -405,17 +404,12 @@ export const leaveGroup = async (req, res) => {
 
 export const listGroupMembers = async (req, res) => {
   try {
-    const group = await Group.findById(req.params.id);
-    if (!group) {
-      return res.status(404).json({ message: 'Group not found' });
-    }
-
-    const allowed = await canAccessPrivateGroup(group, req.user);
+    const allowed = await canAccessPrivateGroup(req.group, req.user);
     if (!allowed) {
       return res.status(403).json({ message: 'This private group is only available to members' });
     }
 
-    const members = await GroupMember.find({ groupId: group._id })
+    const members = await GroupMember.find({ groupId: req.group._id })
       .populate('userId', 'name email profilePicture university role')
       .sort({ role: 1, joinedAt: 1 });
 
@@ -435,15 +429,19 @@ export const listGroupMembers = async (req, res) => {
 
 export const addGroupMember = async (req, res) => {
   try {
-    const { userId, email, role = 'member' } = req.body;
-
-    if (!['member', 'group_admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid group member role' });
+    const { errors, value } = validateAddMemberPayload(req.body);
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
+    const { userId, email, role = 'member' } = value;
     const targetUser = await getTargetUser(userId, email);
     if (!targetUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return validationError(res, {
+        [email ? 'email' : 'userId']: email
+          ? 'No user found with that email address'
+          : 'User not found'
+      });
     }
 
     const existingMembership = await GroupMember.findOne({
@@ -452,7 +450,9 @@ export const addGroupMember = async (req, res) => {
     });
 
     if (existingMembership) {
-      return res.status(400).json({ message: 'User is already a member of this group' });
+      return validationError(res, {
+        [email ? 'email' : 'userId']: 'User is already a member of this group'
+      });
     }
 
     const membership = await GroupMember.create({
@@ -490,12 +490,16 @@ export const addGroupMember = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
 export const removeGroupMember = async (req, res) => {
   try {
+    if (!ensureObjectId(res, req.params.userId, 'userId', 'member id')) {
+      return;
+    }
+
     const membership = await GroupMember.findOne({
       groupId: req.group._id,
       userId: req.params.userId
@@ -507,7 +511,9 @@ export const removeGroupMember = async (req, res) => {
 
     const permission = await assertGroupAdminRemovalAllowed(req.group._id, req.params.userId);
     if (!permission.allowed) {
-      return res.status(400).json({ message: permission.message });
+      return validationError(res, {
+        userId: permission.message
+      });
     }
 
     await GroupMember.deleteOne({ _id: membership._id });
@@ -532,8 +538,13 @@ export const updateGroupMemberRole = async (req, res) => {
   try {
     const { role } = req.body;
 
-    if (!['member', 'group_admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid group member role' });
+    if (!ensureObjectId(res, req.params.userId, 'userId', 'member id')) {
+      return;
+    }
+
+    const roleErrors = validateGroupRole(role);
+    if (Object.keys(roleErrors).length > 0) {
+      return validationError(res, roleErrors);
     }
 
     const membership = await GroupMember.findOne({
@@ -561,7 +572,9 @@ export const updateGroupMemberRole = async (req, res) => {
     if (membership.role === 'group_admin' && role !== 'group_admin') {
       const permission = await assertGroupAdminRemovalAllowed(req.group._id, req.params.userId);
       if (!permission.allowed) {
-        return res.status(400).json({ message: permission.message });
+        return validationError(res, {
+          role: permission.message
+        });
       }
     }
 
@@ -618,8 +631,14 @@ export const listGroupJoinRequests = async (req, res) => {
 export const reviewGroupJoinRequest = async (req, res) => {
   try {
     const { status } = req.body;
+    if (!ensureObjectId(res, req.params.requestId, 'requestId', 'join request id')) {
+      return;
+    }
+
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid join request status' });
+      return validationError(res, {
+        status: 'Status must be either "approved" or "rejected"'
+      });
     }
 
     const request = await GroupJoinRequest.findOne({

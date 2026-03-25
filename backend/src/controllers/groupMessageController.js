@@ -1,27 +1,17 @@
-import mongoose from 'mongoose';
 import { GroupMessage } from '../models/GroupMessage.js';
 import { GroupMember } from '../models/GroupMember.js';
 import { createNotification } from '../utils/notifications.js';
+import {
+  GROUP_MESSAGE_MAX_LENGTH,
+  GROUP_REPLY_MAX_LENGTH,
+  ensureObjectId,
+  validateTextContent,
+  validationError
+} from '../utils/validation.js';
 
 const parseNumber = (value, fallback) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
-};
-
-const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
-
-const ensurePathIds = (res, { messageId, replyId } = {}) => {
-  if (messageId && !isValidObjectId(messageId)) {
-    res.status(400).json({ message: 'Invalid message id' });
-    return false;
-  }
-
-  if (replyId && !isValidObjectId(replyId)) {
-    res.status(400).json({ message: 'Invalid reply id' });
-    return false;
-  }
-
-  return true;
 };
 
 const toUserSummary = (user) => {
@@ -124,16 +114,27 @@ export const createGroupMessage = async (req, res) => {
       return res.status(403).json({ message: 'Only group members can post messages' });
     }
 
-    const { content, attachments = [] } = req.body;
-    if (!content?.trim()) {
-      return res.status(400).json({ message: 'Message content is required' });
+    const { errors, value: content } = validateTextContent(req.body.content, {
+      field: 'content',
+      label: 'Message',
+      maxLength: GROUP_MESSAGE_MAX_LENGTH
+    });
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
+    }
+
+    const attachments = req.body.attachments ?? [];
+    if (!Array.isArray(attachments)) {
+      return validationError(res, {
+        attachments: 'Attachments must be an array'
+      });
     }
 
     const message = await GroupMessage.create({
       groupId: req.group._id,
       userId: req.user.userId,
-      content: content.trim(),
-      attachments: Array.isArray(attachments) ? attachments : []
+      content,
+      attachments
     });
 
     const populatedMessage = await populateMessage(message._id);
@@ -143,7 +144,7 @@ export const createGroupMessage = async (req, res) => {
       groupMessage: serializeMessage(populatedMessage, req.user.userId)
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
@@ -184,7 +185,7 @@ export const listGroupMessages = async (req, res) => {
 
 export const getGroupMessage = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
       return;
     }
 
@@ -208,7 +209,7 @@ export const getGroupMessage = async (req, res) => {
 
 export const updateGroupMessage = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
       return;
     }
 
@@ -228,12 +229,23 @@ export const updateGroupMessage = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to edit this message' });
     }
 
-    if (!req.body.content?.trim()) {
-      return res.status(400).json({ message: 'Message content is required' });
+    const { errors, value: content } = validateTextContent(req.body.content, {
+      field: 'content',
+      label: 'Message',
+      maxLength: GROUP_MESSAGE_MAX_LENGTH
+    });
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
-    message.content = req.body.content.trim();
-    if (Array.isArray(req.body.attachments)) {
+    message.content = content;
+    if (req.body.attachments !== undefined) {
+      if (!Array.isArray(req.body.attachments)) {
+        return validationError(res, {
+          attachments: 'Attachments must be an array'
+        });
+      }
+
       message.attachments = req.body.attachments;
     }
     await message.save();
@@ -250,7 +262,7 @@ export const updateGroupMessage = async (req, res) => {
 
 export const deleteGroupMessage = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
       return;
     }
 
@@ -280,7 +292,7 @@ export const deleteGroupMessage = async (req, res) => {
 
 export const toggleGroupMessageLike = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
       return;
     }
 
@@ -332,7 +344,7 @@ export const toggleGroupMessageLike = async (req, res) => {
 
 export const createGroupMessageReply = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
       return;
     }
 
@@ -350,14 +362,18 @@ export const createGroupMessageReply = async (req, res) => {
       return res.status(404).json({ message: 'Group message not found' });
     }
 
-    const { content } = req.body;
-    if (!content?.trim()) {
-      return res.status(400).json({ message: 'Reply content is required' });
+    const { errors, value: content } = validateTextContent(req.body.content, {
+      field: 'content',
+      label: 'Reply',
+      maxLength: GROUP_REPLY_MAX_LENGTH
+    });
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
     message.replies.push({
       userId: req.user.userId,
-      content: content.trim(),
+      content,
       likes: []
     });
     await message.save();
@@ -379,13 +395,17 @@ export const createGroupMessageReply = async (req, res) => {
       reply: serializeReply(reply, req.user.userId, populatedMessage._id)
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
 export const updateGroupMessageReply = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId, replyId: req.params.replyId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
+      return;
+    }
+
+    if (!ensureObjectId(res, req.params.replyId, 'replyId', 'reply id')) {
       return;
     }
 
@@ -410,11 +430,16 @@ export const updateGroupMessageReply = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to edit this reply' });
     }
 
-    if (!req.body.content?.trim()) {
-      return res.status(400).json({ message: 'Reply content is required' });
+    const { errors, value: content } = validateTextContent(req.body.content, {
+      field: 'content',
+      label: 'Reply',
+      maxLength: GROUP_REPLY_MAX_LENGTH
+    });
+    if (Object.keys(errors).length > 0) {
+      return validationError(res, errors);
     }
 
-    reply.content = req.body.content.trim();
+    reply.content = content;
     await message.save();
 
     const populatedMessage = await populateMessage(message._id);
@@ -431,7 +456,11 @@ export const updateGroupMessageReply = async (req, res) => {
 
 export const deleteGroupMessageReply = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId, replyId: req.params.replyId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
+      return;
+    }
+
+    if (!ensureObjectId(res, req.params.replyId, 'replyId', 'reply id')) {
       return;
     }
 
@@ -467,7 +496,11 @@ export const deleteGroupMessageReply = async (req, res) => {
 
 export const toggleGroupMessageReplyLike = async (req, res) => {
   try {
-    if (!ensurePathIds(res, { messageId: req.params.messageId, replyId: req.params.replyId })) {
+    if (!ensureObjectId(res, req.params.messageId, 'messageId', 'message id')) {
+      return;
+    }
+
+    if (!ensureObjectId(res, req.params.replyId, 'replyId', 'reply id')) {
       return;
     }
 

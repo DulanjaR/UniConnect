@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { groupsAPI } from '../services/api';
 import GroupMessageCard from './GroupMessageCard';
 import GroupMessageComposer from './GroupMessageComposer';
+import { GROUP_MESSAGE_MAX_LENGTH } from '../utils/groupValidation';
 
 export default function GroupFeedSection({ group, currentUser }) {
   const [messages, setMessages] = useState([]);
@@ -51,7 +52,12 @@ export default function GroupFeedSection({ group, currentUser }) {
         </div>
 
         {canInteract ? (
-          <GroupMessageComposer onSubmit={handleCreateMessage} submitLabel="Post to Group" />
+          <GroupMessageComposer
+            onSubmit={handleCreateMessage}
+            submitLabel="Post to Group"
+            fieldLabel="Message"
+            maxLength={GROUP_MESSAGE_MAX_LENGTH}
+          />
         ) : (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
             {currentUser?.role === 'admin'

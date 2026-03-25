@@ -3,6 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { groupsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import GroupFeedSection from '../components/GroupFeedSection';
+import {
+  getApiErrorDetails,
+  GROUP_DESCRIPTION_MAX_LENGTH,
+  GROUP_NAME_MAX_LENGTH,
+  validateGroupForm,
+  validateMemberEmail
+} from '../utils/groupValidation';
 
 export default function GroupDetails() {
   const navigate = useNavigate();
@@ -20,6 +27,9 @@ export default function GroupDetails() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [managementErrors, setManagementErrors] = useState({});
+  const [memberErrors, setMemberErrors] = useState({});
   const [busyAction, setBusyAction] = useState('');
 
   const canManage = user?.role === 'admin' || group?.currentUserRole === 'group_admin';
@@ -28,6 +38,7 @@ export default function GroupDetails() {
     try {
       setLoading(true);
       setError('');
+      setSuccessMessage('');
 
       const [groupResponse, membersResponse] = await Promise.all([
         groupsAPI.getById(id),
@@ -64,8 +75,11 @@ export default function GroupDetails() {
   const handleJoin = async () => {
     try {
       setBusyAction('join');
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.join(id);
       await loadGroup();
+      setSuccessMessage(group?.privacy === 'private' ? 'Join request submitted.' : 'Joined group successfully.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to join group');
     } finally {
@@ -76,6 +90,8 @@ export default function GroupDetails() {
   const handleLeave = async () => {
     try {
       setBusyAction('leave');
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.leave(id);
       navigate('/groups');
     } catch (err) {
@@ -87,12 +103,26 @@ export default function GroupDetails() {
 
   const handleUpdate = async (event) => {
     event.preventDefault();
+    const nextErrors = validateGroupForm(managementForm);
+    if (Object.keys(nextErrors).length > 0) {
+      setSuccessMessage('');
+      setManagementErrors(nextErrors);
+      setError('Please fix the highlighted group fields.');
+      return;
+    }
+
     try {
       setBusyAction('update');
+      setError('');
+      setSuccessMessage('');
+      setManagementErrors({});
       await groupsAPI.update(id, managementForm);
       await loadGroup();
+      setSuccessMessage('Group updated successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update group');
+      const { message, errors } = getApiErrorDetails(err);
+      setManagementErrors(errors);
+      setError(message || 'Failed to update group');
     } finally {
       setBusyAction('');
     }
@@ -101,6 +131,8 @@ export default function GroupDetails() {
   const handleDelete = async () => {
     try {
       setBusyAction('delete');
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.delete(id);
       navigate('/groups');
     } catch (err) {
@@ -112,13 +144,29 @@ export default function GroupDetails() {
 
   const handleAddMember = async (event) => {
     event.preventDefault();
+    const emailError = validateMemberEmail(inviteEmail);
+    if (emailError) {
+      setSuccessMessage('');
+      setMemberErrors({ email: emailError });
+      setError('Please fix the highlighted member field.');
+      return;
+    }
+
     try {
       setBusyAction('add-member');
+      setError('');
+      setSuccessMessage('');
+      setMemberErrors({});
       await groupsAPI.addMember(id, { email: inviteEmail });
       setInviteEmail('');
       await loadGroup();
+      setSuccessMessage('Member added successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add member');
+      const { message, errors } = getApiErrorDetails(err);
+      setMemberErrors({
+        email: errors.email || errors.memberIdentifier || message || 'Failed to add member'
+      });
+      setError(message || 'Failed to add member');
     } finally {
       setBusyAction('');
     }
@@ -127,8 +175,11 @@ export default function GroupDetails() {
   const handleRemoveMember = async (userId) => {
     try {
       setBusyAction(`remove-${userId}`);
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.removeMember(id, userId);
       await loadGroup();
+      setSuccessMessage('Member removed successfully.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to remove member');
     } finally {
@@ -139,8 +190,11 @@ export default function GroupDetails() {
   const handleRoleChange = async (userId, role) => {
     try {
       setBusyAction(`role-${userId}`);
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.updateMemberRole(id, userId, { role });
       await loadGroup();
+      setSuccessMessage('Member role updated successfully.');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update member role');
     } finally {
@@ -151,8 +205,11 @@ export default function GroupDetails() {
   const handleJoinRequest = async (requestId, status) => {
     try {
       setBusyAction(`request-${requestId}`);
+      setError('');
+      setSuccessMessage('');
       await groupsAPI.reviewJoinRequest(id, requestId, { status });
       await loadGroup();
+      setSuccessMessage(`Join request ${status}.`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to review join request');
     } finally {
@@ -173,6 +230,11 @@ export default function GroupDetails() {
   return (
     <div className="space-y-8">
       {error && <div className="rounded-lg border border-red-300 bg-red-100 px-4 py-3 text-red-700">{error}</div>}
+      {successMessage && (
+        <div className="rounded-lg border border-emerald-300 bg-emerald-100 px-4 py-3 text-emerald-700">
+          {successMessage}
+        </div>
+      )}
 
       <section className="card">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -302,38 +364,68 @@ export default function GroupDetails() {
                   <input
                     className="input-field"
                     value={managementForm.name}
-                    onChange={(event) => setManagementForm((current) => ({ ...current, name: event.target.value }))}
+                    onChange={(event) => {
+                      setManagementForm((current) => ({ ...current, name: event.target.value }));
+                      setManagementErrors((current) => ({ ...current, name: '' }));
+                    }}
+                    maxLength={GROUP_NAME_MAX_LENGTH}
                     required
                   />
+                  <div className="mt-1 flex items-center justify-between gap-3 text-xs">
+                    <span className="text-red-600">{managementErrors.name || ''}</span>
+                    <span className="text-gray-500">
+                      {managementForm.name.length}/{GROUP_NAME_MAX_LENGTH}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">Description</label>
                   <textarea
                     className="input-field min-h-32"
                     value={managementForm.description}
-                    onChange={(event) =>
-                      setManagementForm((current) => ({ ...current, description: event.target.value }))
-                    }
+                    onChange={(event) => {
+                      setManagementForm((current) => ({ ...current, description: event.target.value }));
+                      setManagementErrors((current) => ({ ...current, description: '' }));
+                    }}
+                    maxLength={GROUP_DESCRIPTION_MAX_LENGTH}
                   />
+                  <div className="mt-1 flex items-center justify-between gap-3 text-xs">
+                    <span className="text-red-600">{managementErrors.description || ''}</span>
+                    <span className="text-gray-500">
+                      {managementForm.description.length}/{GROUP_DESCRIPTION_MAX_LENGTH}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">Image URL</label>
                   <input
                     className="input-field"
                     value={managementForm.image}
-                    onChange={(event) => setManagementForm((current) => ({ ...current, image: event.target.value }))}
+                    onChange={(event) => {
+                      setManagementForm((current) => ({ ...current, image: event.target.value }));
+                      setManagementErrors((current) => ({ ...current, image: '' }));
+                    }}
                   />
+                  {managementErrors.image && (
+                    <p className="mt-1 text-sm text-red-600">{managementErrors.image}</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium">Privacy</label>
                   <select
                     className="input-field"
                     value={managementForm.privacy}
-                    onChange={(event) => setManagementForm((current) => ({ ...current, privacy: event.target.value }))}
+                    onChange={(event) => {
+                      setManagementForm((current) => ({ ...current, privacy: event.target.value }));
+                      setManagementErrors((current) => ({ ...current, privacy: '' }));
+                    }}
                   >
                     <option value="public">Public</option>
                     <option value="private">Private</option>
                   </select>
+                  {managementErrors.privacy && (
+                    <p className="mt-1 text-sm text-red-600">{managementErrors.privacy}</p>
+                  )}
                 </div>
 
                 <button className="btn-primary" type="submit" disabled={busyAction === 'update'}>
@@ -348,10 +440,14 @@ export default function GroupDetails() {
                     className="input-field"
                     type="email"
                     value={inviteEmail}
-                    onChange={(event) => setInviteEmail(event.target.value)}
+                    onChange={(event) => {
+                      setInviteEmail(event.target.value);
+                      setMemberErrors((current) => ({ ...current, email: '' }));
+                    }}
                     placeholder="student@university.edu"
                     required
                   />
+                  {memberErrors.email && <p className="mt-1 text-sm text-red-600">{memberErrors.email}</p>}
                 </div>
                 <button className="btn-outline" type="submit" disabled={busyAction === 'add-member'}>
                   Add Member

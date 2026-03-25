@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CreatePost from './pages/CreatePost';
+import Profile from './pages/Profile';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -47,6 +48,8 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:userId" element={<Profile />} />
 
         {/* Protected routes */}
         <Route

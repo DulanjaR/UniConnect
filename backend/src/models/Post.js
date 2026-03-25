@@ -25,8 +25,25 @@ const postSchema = new mongoose.Schema(
 );
 
 // Index for search and filtering
-postSchema.index({ title: 'text', body: 'text', tags: 1, category: 1 });
+postSchema.index({ title: 'text', body: 'text' });
+postSchema.index({ category: 1, tags: 1 });
 postSchema.index({ author: 1 });
 postSchema.index({ createdAt: -1 });
 
-export const Post = mongoose.model('Post', postSchema);
+const Post = mongoose.model('Post', postSchema);
+
+// Drop old problematic index on startup
+setTimeout(async () => {
+  try {
+    await Post.collection.dropIndex('title_text_body_text_tags_1_category_1');
+    console.log('✓ Dropped old problematic index from database');
+  } catch (err) {
+    if (err.message.includes('index not found')) {
+      console.log('✓ Old index not found in database (already cleaned)');
+    } else {
+      console.log('Note:', err.message);
+    }
+  }
+}, 1000);
+
+export { Post };

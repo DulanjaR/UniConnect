@@ -91,7 +91,9 @@ export default function CreatePost() {
         body: formData.body,
         tags,
         category: formData.category,
-        imageUrl: formData.imageUrl
+        imageUrl: formData.imageUrl,
+        year: user?.academicYear,
+        semester: user?.semester
       });
 
       setSuccess(true);

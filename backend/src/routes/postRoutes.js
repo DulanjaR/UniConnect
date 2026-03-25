@@ -14,15 +14,7 @@ import upload from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Public routes
-router.get('/', getPosts);
-router.get('/feed', getPostFeed);
-router.get('/author/:authorId', getPostsByAuthor);
-router.get('/:id', getPost);
-
-// Protected routes (require authentication)
-router.post('/', authMiddleware, createPost);
-
+// ⚠️ IMPORTANT: Upload route MUST come before /:id route because Express matches in order
 // Upload endpoint with error handling
 router.post('/upload', authMiddleware, upload.single('image'), (req, res) => {
   try {
@@ -45,6 +37,15 @@ router.post('/upload', authMiddleware, upload.single('image'), (req, res) => {
     details: err.toString()
   });
 });
+
+// Public routes
+router.get('/', getPosts);
+router.get('/feed', getPostFeed);
+router.get('/author/:authorId', getPostsByAuthor);
+router.get('/:id', getPost);
+
+// Protected routes (require authentication)
+router.post('/', authMiddleware, createPost);
 
 router.put('/:id', authMiddleware, updatePost);
 router.delete('/:id', authMiddleware, deletePost);

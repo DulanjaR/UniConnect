@@ -2,6 +2,32 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Helper to get token from localStorage
+const getToken = () => localStorage.getItem('token');
+
+// Create axios instance with default headers
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+});
+
+// Add token to all requests
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Auth API
+export const authAPI = {
+  getProfile: () => axiosInstance.get(`/auth/profile`),
+  updateProfile: (data) => axiosInstance.put(`/auth/profile`, data),
+};
+
 // Posts API
 export const postsAPI = {
   getAll: (params) => axios.get(`${API_URL}/posts`, { params }),

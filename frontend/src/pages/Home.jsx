@@ -12,10 +12,19 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  
+  // Year/Semester filtering
+  const [selectedYear, setSelectedYear] = useState(user?.academicYear || '');
+  const [selectedSemester, setSelectedSemester] = useState(user?.semester || '');
+  const [showOtherYears, setShowOtherYears] = useState(false);
+
+  // Available year/semester combinations (1-4 years, 1-2 semesters)
+  const years = [1, 2, 3, 4];
+  const semesters = [1, 2];
 
   useEffect(() => {
     fetchPosts();
-  }, [category, page, search]);
+  }, [category, page, search, selectedYear, selectedSemester]);
 
   const fetchPosts = async () => {
     try {
@@ -25,6 +34,10 @@ export default function Home() {
       const params = { page, limit: 10 };
       if (category) params.category = category;
       if (search) params.search = search;
+      if (selectedYear && selectedSemester) {
+        params.year = selectedYear;
+        params.semester = selectedSemester;
+      }
 
       const response = await postsAPI.getAll(params);
       setPosts(response.data.posts);
@@ -46,6 +59,12 @@ export default function Home() {
     }
   };
 
+  const handleYearSemesterChange = (year, semester) => {
+    setSelectedYear(year);
+    setSelectedSemester(semester);
+    setPage(1);
+  };
+
   return (
     <div className="min-h-screen bg-light-beige">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -53,6 +72,43 @@ export default function Home() {
         <div className="mb-8">
           <h1 className="section-title">Academic Feed</h1>
           <p className="text-gray-600">Connect with students, share knowledge, and find resources</p>
+        </div>
+
+        {/* Year/Semester Filter - At the top */}
+        <div className="card mb-6 bg-white border-l-4 border-primary-teal">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800">Filter by Year & Semester</h3>
+            <button
+              onClick={() => setShowOtherYears(!showOtherYears)}
+              className="text-sm text-primary-teal hover:text-secondary-teal font-semibold"
+            >
+              {showOtherYears ? '▼ Hide other years' : '▶ Show other years'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {years.map(year => (
+              semesters.map(semester => (
+                <button
+                  key={`${year}-${semester}`}
+                  onClick={() => handleYearSemesterChange(year, semester)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedYear === year && selectedSemester === semester
+                      ? 'bg-primary-teal text-white'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  } ${year > 2 && !showOtherYears ? 'hidden md:block' : ''}`}
+                >
+                  Year {year} Sem {semester}
+                </button>
+              ))
+            ))}
+          </div>
+
+          <div className="mt-3 text-xs text-gray-500">
+            {user && (
+              <p>📍 Your year/semester: Year {user.academicYear} Semester {user.semester}</p>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -134,6 +190,16 @@ export default function Home() {
                     </div>
                     <span className="badge-primary">{post.category}</span>
                   </div>
+
+                  {post.imageUrl && (
+                    <div className="mb-4">
+                      <img 
+                        src={post.imageUrl} 
+                        alt={post.title}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    </div>
+                  )}
 
                   <p className="text-gray-700 mb-4 line-clamp-3">{post.body}</p>
 

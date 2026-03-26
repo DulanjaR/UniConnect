@@ -36,7 +36,9 @@ export default function Navbar() {
                 </Link>
               )}
               <div className="flex items-center gap-2 border-l border-accent-beige pl-6">
-                <span className="text-sm">{user.name}</span>
+                <Link to="/profile" className="hover:text-accent-beige transition">
+                  👤 {user.name}
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="bg-accent-beige text-primary-teal px-4 py-2 rounded hover:bg-yellow-100 transition"

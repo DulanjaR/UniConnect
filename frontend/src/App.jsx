@@ -11,6 +11,7 @@ import CreatePost from './pages/CreatePost';
 import LostFound from './pages/LostFound';
 import AddItem from "./pages/AddItem";
 import ItemDetails from "./pages/ItemDetails";
+import Profile from './pages/Profile';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +52,8 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/lost-found" element={<LostFound />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:userId" element={<Profile />} />
 
         {/* Protected routes */}
         <Route

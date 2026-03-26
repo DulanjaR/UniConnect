@@ -10,16 +10,19 @@ import {
   flagItem
 } from '../controllers/lostItemController.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import upload from '../middleware/upload.js';
+import { getMyItems } from '../controllers/lostItemController.js';
 
 const router = express.Router();
 
 // Public routes
 router.get('/', getLostItems);
+router.get('/my-items', authMiddleware, getMyItems);
 router.get('/:id', getLostItem);
 
 // Protected routes
-router.post('/', authMiddleware, createLostItem);
-router.put('/:id', authMiddleware, updateLostItem);
+router.post('/', authMiddleware, upload.array('images'), createLostItem);
+router.put('/:id', authMiddleware, upload.array('images'), updateLostItem);
 router.delete('/:id', authMiddleware, deleteLostItem);
 router.post('/:id/resolve', authMiddleware, markAsResolved);
 router.post('/:id/comment', authMiddleware, addComment);

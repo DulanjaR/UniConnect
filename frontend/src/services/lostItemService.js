@@ -10,6 +10,7 @@ export const createItem = async (data, token) => {
   return axios.post(API, data, {
     headers: {
       Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
     },
   });
 };

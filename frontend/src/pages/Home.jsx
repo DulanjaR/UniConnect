@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { MessageCircle, Eye, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { postsAPI } from '../services/api';
 
@@ -8,15 +9,13 @@ export default function Home() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
   // Year/Semester filtering
-  const [selectedYear, setSelectedYear] = useState(user?.academicYear || '');
-  const [selectedSemester, setSelectedSemester] = useState(user?.semester || '');
-  const [showOtherYears, setShowOtherYears] = useState(false);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
 
   // Available year/semester combinations (1-4 years, 1-2 semesters)
   const years = [1, 2, 3, 4];
@@ -24,7 +23,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchPosts();
-  }, [category, page, search, selectedYear, selectedSemester]);
+  }, [page, search, selectedYear, selectedSemester]);
 
   const fetchPosts = async () => {
     try {
@@ -32,7 +31,6 @@ export default function Home() {
       setError('');
 
       const params = { page, limit: 10 };
-      if (category) params.category = category;
       if (search) params.search = search;
       if (selectedYear && selectedSemester) {
         params.year = selectedYear;
@@ -59,12 +57,6 @@ export default function Home() {
     }
   };
 
-  const handleYearSemesterChange = (year, semester) => {
-    setSelectedYear(year);
-    setSelectedSemester(semester);
-    setPage(1);
-  };
-
   return (
     <div className="min-h-screen bg-light-beige">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -72,43 +64,6 @@ export default function Home() {
         <div className="mb-8">
           <h1 className="section-title">Academic Feed</h1>
           <p className="text-gray-600">Connect with students, share knowledge, and find resources</p>
-        </div>
-
-        {/* Year/Semester Filter - At the top */}
-        <div className="card mb-6 bg-white border-l-4 border-primary-teal">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-800">Filter by Year & Semester</h3>
-            <button
-              onClick={() => setShowOtherYears(!showOtherYears)}
-              className="text-sm text-primary-teal hover:text-secondary-teal font-semibold"
-            >
-              {showOtherYears ? '▼ Hide other years' : '▶ Show other years'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {years.map(year => (
-              semesters.map(semester => (
-                <button
-                  key={`${year}-${semester}`}
-                  onClick={() => handleYearSemesterChange(year, semester)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedYear === year && selectedSemester === semester
-                      ? 'bg-primary-teal text-white'
-                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                  } ${year > 2 && !showOtherYears ? 'hidden md:block' : ''}`}
-                >
-                  Year {year} Sem {semester}
-                </button>
-              ))
-            ))}
-          </div>
-
-          <div className="mt-3 text-xs text-gray-500">
-            {user && (
-              <p>📍 Your year/semester: Year {user.academicYear} Semester {user.semester}</p>
-            )}
-          </div>
         </div>
 
         {/* Filters */}
@@ -129,20 +84,35 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  setPage(1);
-                }}
-                className="input-field"
-              >
-                <option value="">All Categories</option>
-                <option value="study">Study</option>
-                <option value="lost">Lost Items</option>
-                <option value="found">Found Items</option>
-              </select>
+              <label className="block text-sm font-medium mb-2">Year & Semester</label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    setSelectedYear(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="input-field flex-1"
+                >
+                  <option value="">All Years</option>
+                  {years.map(year => (
+                    <option key={year} value={year}>Year {year}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedSemester}
+                  onChange={(e) => {
+                    setSelectedSemester(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="input-field flex-1"
+                >
+                  <option value="">All Semesters</option>
+                  {semesters.map(sem => (
+                    <option key={sem} value={sem}>Semester {sem}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {user && (
@@ -212,9 +182,19 @@ export default function Home() {
                   </div>
 
                   <div className="flex justify-between items-center text-sm text-gray-500">
-                    <div className="flex gap-4">
-                      <span>👁 {post.views} views</span>
-                      <span>❤️ {post.likes?.length || 0} likes</span>
+                    <div className="flex gap-6 text-xs">
+                      <div className="flex items-center gap-1">
+                        <Heart className="w-4 h-4 text-red-500" />
+                        <span>{post.likes?.length || 0} Likes</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle className="w-4 h-4 text-blue-500" />
+                        <span>{post.commentCount || 0} Comments</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="w-4 h-4 text-gray-500" />
+                        <span>{post.views || 0} Views</span>
+                      </div>
                     </div>
                     {user && (
                       <button

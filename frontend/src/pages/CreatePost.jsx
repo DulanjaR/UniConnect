@@ -164,9 +164,8 @@ export default function CreatePost() {
               className="input-field"
             >
               <option value="study">Study</option>
-              <option value="lost">Lost Item</option>
-              <option value="found">Found Item</option>
             </select>
+            <p className="text-xs text-gray-500 mt-2">Use the Lost & Found section for lost or found items</p>
           </div>
 
           <div>

@@ -8,12 +8,14 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CreatePost from './pages/CreatePost';
+import PostDetail from './pages/PostDetail';
 import LostFound from './pages/LostFound';
 import AddItem from "./pages/AddItem";
 import ItemDetails from "./pages/ItemDetails";
 import Profile from './pages/Profile';
 import MyItems from "./pages/MyItems";
 import EditItem from "./pages/EditItem";
+import GroupsPage from './pages/GroupsPage';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -56,6 +58,7 @@ function AppContent() {
         <Route path="/lost-found" element={<LostFound />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
+        <Route path="/post/:postId" element={<PostDetail />} />
 
         {/* Protected routes */}
         <Route
@@ -63,6 +66,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CreatePost />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <ProtectedRoute>
+              <GroupsPage />
             </ProtectedRoute>
           }
         />

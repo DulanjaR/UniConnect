@@ -8,13 +8,16 @@ const postSchema = new mongoose.Schema(
     tags: [{ type: String }],
     category: {
       type: String,
-      enum: ['study', 'lost', 'found'],
-      required: true
+      enum: ['study'],
+      required: true,
+      default: 'study'
     },
     imageUrl: { type: String },
     isPublished: { type: Boolean, default: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     views: { type: Number, default: 0 },
+    shares: [{ type: mongoose.Schema.Types.ObjectId, ref: 'PostShare' }], // Track shares
+    commentCount: { type: Number, default: 0 }, // Denormalized for faster queries
     acceptedAnswer: { type: mongoose.Schema.Types.ObjectId, ref: 'Comment' },
     searchKeywords: [{ type: String }],
     year: { type: Number },

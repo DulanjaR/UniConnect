@@ -4,12 +4,12 @@ import { AdminLog } from '../models/AdminLog.js';
 
 export const createPost = async (req, res) => {
   try {
-    const { title, body, tags, category, imageUrl, year, semester } = req.body;
+    const { title, body, tags, category = 'study', imageUrl, year, semester } = req.body;
     const authorId = req.user.userId;
 
-    // Validate category
-    if (!['study', 'lost', 'found'].includes(category)) {
-      return res.status(400).json({ message: 'Invalid category' });
+    // Validate category - only study posts allowed
+    if (category !== 'study') {
+      return res.status(400).json({ message: 'Only study posts are allowed. Use Lost & Found for lost/found items.' });
     }
 
     const post = await Post.create({
@@ -17,7 +17,7 @@ export const createPost = async (req, res) => {
       title,
       body,
       tags: tags || [],
-      category,
+      category: 'study',
       imageUrl,
       year,
       semester,

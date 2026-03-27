@@ -30,6 +30,9 @@ export const createComment = async (req, res) => {
       );
     }
 
+    // Update post comment count
+    await Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } });
+
     res.status(201).json(comment);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -109,6 +112,9 @@ export const deleteComment = async (req, res) => {
 
     await Comment.findByIdAndUpdate(commentId, { status: 'deleted' });
 
+    // Update post comment count
+    await Post.findByIdAndUpdate(comment.post, { $inc: { commentCount: -1 } });
+
     // Log admin action if admin deleted
     if (req.user.role === 'admin') {
       await AdminLog.create({
@@ -187,6 +193,40 @@ export const markAsAcceptedAnswer = async (req, res) => {
     res.json({
       message: 'Answer marked as accepted',
       comment
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get engagement stats for a post
+export const getPostEngagement = async (req, res) => {
+  try {
+    const { postId } = req.params;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const commentCount = post.commentCount || 0;
+    const likeCount = post.likes.length;
+    const viewCount = post.views;
+    const shareCount = post.shares.length;
+
+    // Get top likers (first 5)
+    const likers = await Post.findById(postId)
+      .select('likes')
+      .populate('likes', 'name profilePicture email')
+      .then(p => p.likes.slice(0, 5));
+
+    res.json({
+      likes: likeCount,
+      comments: commentCount,
+      views: viewCount,
+      shares: shareCount,
+      topLikers: likers,
+      hasUserLiked: post.likes.includes(req.user.userId)
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

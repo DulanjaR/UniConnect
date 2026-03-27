@@ -8,6 +8,8 @@ import commentRoutes from './routes/commentRoutes.js';
 import lostItemRoutes from './routes/lostItemRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import { groupRoutes } from './routes/groupRoutes.js';
+import { postShareRoutes } from './routes/postShareRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -28,6 +30,8 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/lost-items', lostItemRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/shares', postShareRoutes);
 
 connectDB(mongoUri).then(() => {
   app.listen(port, () => {

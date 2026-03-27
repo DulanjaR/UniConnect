@@ -24,8 +24,8 @@ export default function Navbar() {
               <Link to="/" className="hover:text-accent-beige transition">
                 Home
               </Link>
-              <Link to="/create" className="hover:text-accent-beige transition">
-                Create Post
+              <Link to="/groups" className="hover:text-accent-beige transition">
+                Groups
               </Link>
               <Link to="/lost-found" className="hover:text-accent-beige transition">
                 Lost & Found

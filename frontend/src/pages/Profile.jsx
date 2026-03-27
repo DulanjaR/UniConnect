@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Heart, MessageCircle, Eye, MoreVertical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { postsAPI, authAPI } from '../services/api';
 import axios from 'axios';
@@ -15,6 +16,13 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editingPostData, setEditingPostData] = useState({
+    title: '',
+    body: '',
+    tags: ''
+  });
 
   const [editData, setEditData] = useState({
     name: '',
@@ -82,6 +90,57 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeletePost = async (postId, e) => {
+    e.stopPropagation();
+    
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      await postsAPI.delete(postId);
+      // Remove post from state
+      setPosts(posts.filter(p => p._id !== postId));
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      setError('Failed to delete post: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const startEditingPost = (post, e) => {
+    e.stopPropagation();
+    setEditingPostId(post._id);
+    setEditingPostData({
+      title: post.title,
+      body: post.body,
+      tags: post.tags?.join(', ') || ''
+    });
+    setOpenMenuId(null);
+  };
+
+  const savePostChanges = async (postId) => {
+    try {
+      const tags = editingPostData.tags.split(',').map(t => t.trim()).filter(t => t);
+      
+      const response = await postsAPI.update(postId, {
+        title: editingPostData.title,
+        body: editingPostData.body,
+        tags
+      });
+
+      // Update post in list
+      setPosts(posts.map(p => p._id === postId ? response.data : p));
+      setEditingPostId(null);
+    } catch (err) {
+      console.error('Error updating post:', err);
+      setError('Failed to update post: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const cancelEditingPost = () => {
+    setEditingPostId(null);
+    setEditingPostData({ title: '', body: '', tags: '' });
   };
 
   const handleProfilePictureChange = async (e) => {
@@ -378,47 +437,141 @@ export default function Profile() {
           ) : (
             <div className="space-y-6">
               {posts.map(post => (
-                <div
-                  key={post._id}
-                  className="card hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/post/${post._id}`)}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="text-xl font-bold text-primary-teal">
-                        {post.title}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {new Date(post.createdAt).toLocaleDateString()}
-                      </p>
+                <div key={post._id}>
+                  {editingPostId === post._id ? (
+                    // Edit mode
+                    <div className="card space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={editingPostData.title}
+                          onChange={(e) => setEditingPostData({...editingPostData, title: e.target.value})}
+                          className="input-field"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Content</label>
+                        <textarea
+                          value={editingPostData.body}
+                          onChange={(e) => setEditingPostData({...editingPostData, body: e.target.value})}
+                          rows="6"
+                          className="input-field resize-vertical"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+                        <input
+                          type="text"
+                          value={editingPostData.tags}
+                          onChange={(e) => setEditingPostData({...editingPostData, tags: e.target.value})}
+                          className="input-field"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => savePostChanges(post._id)}
+                          className="btn-primary flex-1"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={cancelEditingPost}
+                          className="btn-outline flex-1"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                    <span className="badge-primary">{post.category}</span>
-                  </div>
+                  ) : (
+                    // View mode
+                    <div
+                      className="card hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/post/${post._id}`)}
+                    >
+                      <div className="flex justify-between items-start mb-3 relative">
+                        <div>
+                          <h3 className="text-xl font-bold text-primary-teal">
+                            {post.title}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="badge-primary">{post.category}</span>
+                          {isOwnProfile && (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === post._id ? null : post._id);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded transition"
+                                title="More options"
+                              >
+                                <MoreVertical className="w-5 h-5 text-gray-600" />
+                              </button>
+                              
+                              {openMenuId === post._id && (
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-gray-200 rounded shadow-lg z-10">
+                                  <button
+                                    onClick={(e) => startEditingPost(post, e)}
+                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleDeletePost(post._id, e)}
+                                    className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-                  {post.imageUrl && (
-                    <div className="mb-4">
-                      <img
-                        src={post.imageUrl}
-                        alt={post.title}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
+                      {post.imageUrl && (
+                        <div className="mb-4">
+                          <img
+                            src={post.imageUrl}
+                            alt={post.title}
+                            className="w-full h-48 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-gray-700 mb-4 line-clamp-3">{post.body}</p>
+
+                      <div className="flex gap-2 mb-4">
+                        {post.tags?.map(tag => (
+                          <span key={tag} className="badge-secondary">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex gap-6 text-xs text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4 text-red-500" />
+                            <span>{post.likes?.length || 0} Likes</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4 text-blue-500" />
+                            <span>{post.commentCount || 0} Comments</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-4 h-4 text-gray-500" />
+                            <span>{post.views || 0} Views</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
-
-                  <p className="text-gray-700 mb-4 line-clamp-3">{post.body}</p>
-
-                  <div className="flex gap-2 mb-4">
-                    {post.tags?.map(tag => (
-                      <span key={tag} className="badge-secondary">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-4 text-sm text-gray-500">
-                    <span>👁 {post.views} views</span>
-                    <span>❤️ {post.likes?.length || 0} likes</span>
-                  </div>
                 </div>
               ))}
             </div>

@@ -12,8 +12,10 @@ const userSchema = new mongoose.Schema(
     academicYear: { type: Number },
     semester: { type: Number },
     phone: { type: String },
+    itNumber: { type: String, unique: true, sparse: true }, // Student IT number for group creation
     isActive: { type: Boolean, default: true },
-    lastLogin: { type: Date }
+    lastLogin: { type: Date },
+    groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }] // Groups user is member of
   },
   { timestamps: true }
 );

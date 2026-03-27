@@ -8,7 +8,12 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import CreatePost from './pages/CreatePost';
+import LostFound from './pages/LostFound';
+import AddItem from "./pages/AddItem";
+import ItemDetails from "./pages/ItemDetails";
 import Profile from './pages/Profile';
+import MyItems from "./pages/MyItems";
+import EditItem from "./pages/EditItem";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -48,6 +53,7 @@ function AppContent() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/lost-found" element={<LostFound />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
 
@@ -60,6 +66,31 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/add-item"
+          element={
+           <ProtectedRoute>
+              <AddItem />
+           </ProtectedRoute>
+          }
+        />
+        <Route path="/item/:id" element={<ItemDetails />} />
+        <Route
+          path="/my-items"
+          element={
+           <ProtectedRoute>
+              <MyItems />
+           </ProtectedRoute>
+          }
+         />
+         <Route
+          path="/edit-item/:id"
+          element={
+           <ProtectedRoute>
+              <EditItem />
+           </ProtectedRoute>
+          }
+          />
 
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" />} />

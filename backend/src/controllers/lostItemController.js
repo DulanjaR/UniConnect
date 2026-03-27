@@ -3,8 +3,24 @@ import { AdminLog } from '../models/AdminLog.js';
 
 export const createLostItem = async (req, res) => {
   try {
-    const { title, description, category, itemType, location, dateOfIncident, contactEmail, contactPhone } = req.body;
+    const {
+      title,
+      description,
+      category,
+      itemType,
+      location,
+      dateOfIncident,
+      contactEmail,
+      contactPhone,
+    } = req.body;
+
     const reporterId = req.user.userId;
+
+    // ✅ HANDLE IMAGES
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      imageUrls = req.files.map((file) => file.path);
+    }
 
     const item = new LostItem({
       reporter: reporterId,
@@ -14,18 +30,20 @@ export const createLostItem = async (req, res) => {
       itemType,
       location,
       dateOfIncident,
+      images: imageUrls, // ✅ IMPORTANT
       contactInfo: {
         email: contactEmail,
-        phone: contactPhone
+        phone: contactPhone,
       },
-      status: 'active'
+      status: "active",
     });
 
     await item.save();
-    await item.populate('reporter', 'name email profilePicture phone');
+    await item.populate("reporter", "name email profilePicture phone");
 
     res.status(201).json(item);
   } catch (err) {
+    console.error(err);
     res.status(400).json({ message: err.message });
   }
 };
@@ -101,25 +119,46 @@ export const getLostItem = async (req, res) => {
 export const updateLostItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, category, location, dateOfIncident } = req.body;
 
     const item = await LostItem.findById(id);
+
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    if (item.reporter.toString() !== req.user.userId && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this item' });
+    if (
+      item.reporter.toString() !== req.user.userId &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const updatedItem = await LostItem.findByIdAndUpdate(
-      id,
-      { title, description, category, location, dateOfIncident },
-      { new: true }
-    ).populate('reporter', 'name email profilePicture');
+    // ✅ Update fields
+    item.title = req.body.title || item.title;
+    item.description = req.body.description || item.description;
+    item.category = req.body.category || item.category;
+    item.itemType = req.body.itemType || item.itemType;
+    item.location = req.body.location || item.location;
+    item.dateOfIncident =
+      req.body.dateOfIncident || item.dateOfIncident;
 
-    res.json(updatedItem);
+    // ✅ Contact info
+    item.contactInfo = {
+      email: req.body.contactEmail || item.contactInfo?.email,
+      phone: req.body.contactPhone || item.contactInfo?.phone,
+    };
+
+    // ✅ IMAGE UPDATE (IMPORTANT)
+    if (req.files && req.files.length > 0) {
+      const imageUrls = req.files.map((file) => file.path);
+      item.images = imageUrls; // replace images
+    }
+
+    await item.save();
+
+    res.json(item);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -240,5 +279,19 @@ export const flagItem = async (req, res) => {
     res.json(item);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+export const getMyItems = async (req, res) => {
+  try {
+    const items = await LostItem.find({
+      reporter: req.user.userId,
+      status: { $ne: "removed" } // exclude deleted items
+    }).sort({ createdAt: -1 });
+
+    res.json(items);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };

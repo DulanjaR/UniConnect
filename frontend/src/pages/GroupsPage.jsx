@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Users, Trash2, UserPlus } from 'lucide-react';
 import GroupModal from '../components/GroupModal';
+import AddMemberModal from '../components/AddMemberModal';
 
 export default function GroupsPage() {
   const navigate = useNavigate();
@@ -58,6 +59,11 @@ export default function GroupsPage() {
 
   const handleGroupCreated = (newGroup) => {
     setGroups([newGroup, ...groups]);
+  };
+
+  const handleMemberAdded = (updatedGroup) => {
+    setGroups(groups.map(g => g._id === updatedGroup._id ? updatedGroup : g));
+    setSelectedGroup(null);
   };
 
   return (
@@ -176,6 +182,14 @@ export default function GroupsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onGroupCreated={handleGroupCreated}
+      />
+
+      {/* Add Member Modal */}
+      <AddMemberModal
+        isOpen={selectedGroup !== null}
+        onClose={() => setSelectedGroup(null)}
+        group={selectedGroup}
+        onMemberAdded={handleMemberAdded}
       />
     </div>
   );

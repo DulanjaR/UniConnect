@@ -12,6 +12,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(null);
   
   // Year/Semester filtering
   const [selectedYear, setSelectedYear] = useState('');
@@ -68,6 +69,28 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-light-beige">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={selectedImage} 
+              alt="Full view"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -176,12 +199,17 @@ export default function Home() {
                         <img 
                           src={post.images[0]} 
                           alt={post.title}
-                          className="w-full aspect-square object-cover rounded-lg"
+                          onClick={() => setSelectedImage(post.images[0])}
+                          className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         />
                       ) : (
                         <div className="grid grid-cols-2 gap-2 max-h-64">
                           {post.images.slice(0, 4).map((img, idx) => (
-                            <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                            <div 
+                              key={idx} 
+                              className="relative overflow-hidden rounded-lg bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setSelectedImage(img)}
+                            >
                               <img 
                                 src={img} 
                                 alt={`${post.title} ${idx}`}

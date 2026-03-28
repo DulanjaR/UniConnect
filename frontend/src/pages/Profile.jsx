@@ -18,6 +18,7 @@ export default function Profile() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [editingPostData, setEditingPostData] = useState({
     title: '',
     body: '',
@@ -240,6 +241,28 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-light-beige py-8">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={selectedImage} 
+              alt="Full view"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto px-4">
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
@@ -276,6 +299,14 @@ export default function Profile() {
                   className="btn-primary mt-4"
                 >
                   Edit Profile
+                </button>
+              )}
+              {isOwnProfile && !isEditing && (
+                <button
+                  onClick={() => navigate('/create')}
+                  className="btn-secondary mt-2"
+                >
+                  Create Post
                 </button>
               )}
             </div>
@@ -419,9 +450,19 @@ export default function Profile() {
 
         {/* Posts Section */}
         <div>
-          <h2 className="section-title mb-6">
-            {isOwnProfile ? 'Your Posts' : `${profile.name}'s Posts`}
-          </h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="section-title">
+              {isOwnProfile ? 'Your Posts' : `${profile.name}'s Posts`}
+            </h2>
+            {isOwnProfile && (
+              <button 
+                onClick={() => navigate('/create')}
+                className="btn-primary"
+              >
+                + New Post
+              </button>
+            )}
+          </div>
 
           {posts.length === 0 ? (
             <div className="card text-center py-12">
@@ -540,12 +581,23 @@ export default function Profile() {
                             <img
                               src={post.images[0]}
                               alt={post.title}
-                              className="w-full aspect-square object-cover rounded-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedImage(post.images[0]);
+                              }}
+                              className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                             />
                           ) : (
                             <div className="grid grid-cols-2 gap-2 max-h-48">
                               {post.images.slice(0, 4).map((img, idx) => (
-                                <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                                <div 
+                                  key={idx} 
+                                  className="relative overflow-hidden rounded-lg bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedImage(img);
+                                  }}
+                                >
                                   <img 
                                     src={img} 
                                     alt={`${post.title} ${idx}`}

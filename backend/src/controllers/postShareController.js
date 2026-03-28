@@ -49,7 +49,7 @@ export const sharePostToGroup = async (req, res) => {
     await Post.findByIdAndUpdate(postId, { $push: { shares: share._id } });
 
     const populatedShare = await share.populate([
-      { path: 'post', select: 'title body imageUrl author' },
+      { path: 'post', select: 'title body images author' },
       { path: 'sharedBy', select: 'name profilePicture' },
       { path: 'sharedToGroup', select: 'name' }
     ]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Eye, MoreVertical } from 'lucide-react';
+import { Heart, MessageCircle, Eye, MoreVertical, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { postsAPI, authAPI } from '../services/api';
 import axios from 'axios';
@@ -534,13 +534,51 @@ export default function Profile() {
                         </div>
                       </div>
 
-                      {post.imageUrl && (
+                      {post.images && post.images.length > 0 && (
                         <div className="mb-4">
-                          <img
-                            src={post.imageUrl}
-                            alt={post.title}
-                            className="w-full h-48 object-cover rounded-lg"
-                          />
+                          {post.images.length === 1 ? (
+                            <img
+                              src={post.images[0]}
+                              alt={post.title}
+                              className="w-full aspect-square object-cover rounded-lg"
+                            />
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 max-h-48">
+                              {post.images.slice(0, 4).map((img, idx) => (
+                                <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                                  <img 
+                                    src={img} 
+                                    alt={`${post.title} ${idx}`}
+                                    className="w-full h-24 object-cover"
+                                  />
+                                  {idx === 3 && post.images.length > 4 && (
+                                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                      <span className="text-white font-semibold">+{post.images.length - 4}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {/* Simple Stats Line */}
+                          <div className="flex gap-4 text-xs text-gray-600 pt-3 border-t mt-3">
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-3 h-3 text-red-500" />
+                              <span>Likes {post.likes?.length || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-3 h-3 text-gray-500" />
+                              <span>Views {post.views || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageCircle className="w-3 h-3 text-blue-500" />
+                              <span>Comments {post.commentCount || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Share2 className="w-3 h-3 text-green-500" />
+                              <span>Shares 0</span>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -552,23 +590,6 @@ export default function Profile() {
                             #{tag}
                           </span>
                         ))}
-                      </div>
-
-                      <div className="flex justify-between items-center text-sm">
-                        <div className="flex gap-6 text-xs text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Heart className="w-4 h-4 text-red-500" />
-                            <span>{post.likes?.length || 0} Likes</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="w-4 h-4 text-blue-500" />
-                            <span>{post.commentCount || 0} Comments</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Eye className="w-4 h-4 text-gray-500" />
-                            <span>{post.views || 0} Views</span>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   )}

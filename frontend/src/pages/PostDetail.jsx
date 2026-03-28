@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Share2, Heart } from 'lucide-react';
+import { ArrowLeft, Heart, Share2, Eye, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import PostEngagement from '../components/PostEngagement';
 import CommentSection from '../components/CommentSection';
 import ShareButton from '../components/ShareButton';
 import { postsAPI } from '../services/api';
@@ -109,16 +108,50 @@ export default function PostDetail() {
             )}
           </div>
 
-          {/* Post Image */}
-          {post.imageUrl && (
+          {/* Post Images */}
+          {post.images && post.images.length > 0 && (
             <div className="px-6 py-4">
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="w-full h-96 object-cover rounded-lg"
-              />
+              {post.images.length === 1 ? (
+                <img
+                  src={post.images[0]}
+                  alt={post.title}
+                  className="w-full aspect-square object-cover rounded-lg"
+                />
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {post.images.map((img, idx) => (
+                    <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                      <img 
+                        src={img} 
+                        alt={`${post.title} ${idx}`}
+                        className="w-full aspect-square object-cover hover:scale-105 transition"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Simple Stats Line */}
+          <div className="px-6 py-3 border-b border-gray-200 flex gap-6 text-sm text-gray-600">
+            <div className="flex items-center gap-1">
+              <Heart className="w-4 h-4 text-red-500" />
+              <span className="font-medium">Likes {post.likes?.length || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Eye className="w-4 h-4 text-gray-500" />
+              <span className="font-medium">Views {post.views || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageCircle className="w-4 h-4 text-blue-500" />
+              <span className="font-medium">Comments {post.commentCount || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Share2 className="w-4 h-4 text-green-500" />
+              <span className="font-medium">Shares {post.shares?.length || 0}</span>
+            </div>
+          </div>
 
           {/* Post Content */}
           <div className="px-6 py-4">
@@ -126,9 +159,6 @@ export default function PostDetail() {
               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{post.body}</p>
             </div>
           </div>
-
-          {/* Engagement Stats */}
-          <PostEngagement postId={postId} post={post} />
 
           {/* Action Buttons */}
           <div className="px-6 py-4 border-t border-gray-200 flex items-center gap-4">
@@ -145,15 +175,6 @@ export default function PostDetail() {
             </button>
 
             <ShareButton postId={postId} postTitle={post.title} />
-
-            {user?.id === post.author?._id && (
-              <button
-                onClick={() => navigate(`/post/${postId}/edit`)}
-                className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-              >
-                Edit Post
-              </button>
-            )}
           </div>
 
           {/* Comments Section */}

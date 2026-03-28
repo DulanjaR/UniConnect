@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ThumbsUp, MessageCircle, Eye, Share2 } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Eye } from 'lucide-react';
 
 export default function PostEngagement({ postId, post, onCommentClick, onShareClick }) {
   const [engagement, setEngagement] = useState({
     likes: 0,
     comments: 0,
     views: 0,
-    shares: 0,
     hasUserLiked: false,
     topLikers: []
   });
@@ -37,7 +36,6 @@ export default function PostEngagement({ postId, post, onCommentClick, onShareCl
           comments: post.commentCount || 0,
           views: post.views || 0,
           shares: post.shares?.length || 0,
-          hasUserLiked: false,
           topLikers: []
         });
       }
@@ -70,12 +68,6 @@ export default function PostEngagement({ postId, post, onCommentClick, onShareCl
         <div className="flex items-center gap-1 cursor-pointer hover:text-blue-600">
           <Eye className="w-4 h-4" />
           <span>{engagement.views} {engagement.views === 1 ? 'View' : 'Views'}</span>
-        </div>
-
-        {/* Shares */}
-        <div className="flex items-center gap-1 cursor-pointer hover:text-blue-600">
-          <Share2 className="w-4 h-4" />
-          <span>{engagement.shares} {engagement.shares === 1 ? 'Share' : 'Shares'}</span>
         </div>
       </div>
 

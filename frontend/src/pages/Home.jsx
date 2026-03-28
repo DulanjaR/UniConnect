@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Eye, Heart } from 'lucide-react';
+import { MessageCircle, Eye, Heart, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { postsAPI } from '../services/api';
 
@@ -54,6 +54,15 @@ export default function Home() {
       fetchPosts();
     } catch (err) {
       console.error('Error liking post:', err);
+    }
+  };
+
+  const handleShare = async (postId) => {
+    try {
+      await postsAPI.share(postId);
+      fetchPosts();
+    } catch (err) {
+      console.error('Error sharing post:', err);
     }
   };
 
@@ -147,10 +156,10 @@ export default function Home() {
             </div>
           ) : (
             posts.map(post => (
-              <Link key={post._id} to={`/post/${post._id}`} className="block">
-                <div className="card hover:shadow-lg transition-shadow">
+              <div key={post._id} className="card hover:shadow-lg transition-shadow">
+                <Link to={`/post/${post._id}`} className="block hover:no-underline">
                   <div className="flex justify-between items-start mb-3">
-                    <div>
+                    <div className="flex-1">
                       <h2 className="text-xl font-bold text-primary-teal hover:text-secondary-teal">
                         {post.title}
                       </h2>
@@ -158,16 +167,54 @@ export default function Home() {
                         by {post.author?.name} • {new Date(post.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="badge-primary">{post.category}</span>
+                    <span className="badge-primary ml-3">{post.category}</span>
                   </div>
 
-                  {post.imageUrl && (
+                  {post.images && post.images.length > 0 && (
                     <div className="mb-4">
-                      <img 
-                        src={post.imageUrl} 
-                        alt={post.title}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
+                      {post.images.length === 1 ? (
+                        <img 
+                          src={post.images[0]} 
+                          alt={post.title}
+                          className="w-full aspect-square object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 max-h-64">
+                          {post.images.slice(0, 4).map((img, idx) => (
+                            <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                              <img 
+                                src={img} 
+                                alt={`${post.title} ${idx}`}
+                                className="w-full h-32 object-cover"
+                              />
+                              {idx === 3 && post.images.length > 4 && (
+                                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                  <span className="text-white font-semibold">+{post.images.length - 4}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Simple Stats Line */}
+                      <div className="flex gap-4 text-xs text-gray-600 pt-3 border-t mt-3">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-3 h-3 text-red-500" />
+                          <span>Likes {post.likes?.length || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Eye className="w-3 h-3 text-gray-500" />
+                          <span>Views {post.views || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3 text-blue-500" />
+                          <span>Comments {post.commentCount || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Share2 className="w-3 h-3 text-green-500" />
+                          <span>Shares 0</span>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -180,36 +227,28 @@ export default function Home() {
                       </span>
                     ))}
                   </div>
+                </Link>
 
-                  <div className="flex justify-between items-center text-sm text-gray-500">
-                    <div className="flex gap-6 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4 text-red-500" />
-                        <span>{post.likes?.length || 0} Likes</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="w-4 h-4 text-blue-500" />
-                        <span>{post.commentCount || 0} Comments</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4 text-gray-500" />
-                        <span>{post.views || 0} Views</span>
-                      </div>
-                    </div>
-                    {user && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleLike(post._id);
-                        }}
-                        className="text-primary-teal hover:text-secondary-teal font-semibold"
-                      >
-                        Like
-                      </button>
-                    )}
+                {/* Like and Share buttons - below everything */}
+                {user && (
+                  <div className="flex gap-2 border-t pt-3">
+                    <button
+                      onClick={() => handleLike(post._id)}
+                      className="text-primary-teal hover:text-secondary-teal font-semibold px-3 py-2 hover:bg-teal-50 rounded transition-colors"
+                    >
+                      <Heart className="w-4 h-4 inline mr-1" />
+                      Like
+                    </button>
+                    <button
+                      onClick={() => handleShare(post._id)}
+                      className="text-primary-teal hover:text-secondary-teal font-semibold px-3 py-2 hover:bg-teal-50 rounded transition-colors"
+                    >
+                      <Share2 className="w-4 h-4 inline mr-1" />
+                      Share
+                    </button>
                   </div>
-                </div>
-              </Link>
+                )}
+              </div>
             ))
           )}
         </div>

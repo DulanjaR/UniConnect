@@ -14,8 +14,9 @@ export default function Navbar() {
   return (
     <nav className="bg-primary-teal text-white shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold hover:text-accent-beige transition">
-          UniConnect
+        <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition">
+          <img src="/images/UniConnectLogo.png" alt="UniConnect Logo" className="h-10" />
+          <span className="text-2xl font-bold text-white">UniConnect</span>
         </Link>
 
         <div className="flex gap-6 items-center">

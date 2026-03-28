@@ -4,7 +4,7 @@ import { AdminLog } from '../models/AdminLog.js';
 
 export const createPost = async (req, res) => {
   try {
-    const { title, body, tags, category = 'study', imageUrl, year, semester } = req.body;
+    const { title, body, tags, category = 'study', images, year, semester } = req.body;
     const authorId = req.user.userId;
 
     // Validate category - only study posts allowed
@@ -18,7 +18,7 @@ export const createPost = async (req, res) => {
       body,
       tags: tags || [],
       category: 'study',
-      imageUrl,
+      images: images || [], // Array of image URLs
       year,
       semester,
       status: 'active'
@@ -33,7 +33,7 @@ export const createPost = async (req, res) => {
 
 export const getPosts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, category, tags, search, sort = '-createdAt' } = req.query;
+    const { page = 1, limit = 10, category, tags, search, sort = '-createdAt', year, semester } = req.query;
     const skip = (page - 1) * limit;
 
     const filter = { status: 'active' };
@@ -52,6 +52,15 @@ export const getPosts = async (req, res) => {
         { title: { $regex: search, $options: 'i' } },
         { body: { $regex: search, $options: 'i' } }
       ];
+    }
+
+    // Add year and semester filtering
+    if (year) {
+      filter.year = parseInt(year);
+    }
+
+    if (semester) {
+      filter.semester = parseInt(semester);
     }
 
     const posts = await Post.find(filter)
@@ -184,7 +193,7 @@ export const getPost = async (req, res) => {
 export const updatePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, body, tags, category, imageUrl } = req.body;
+    const { title, body, tags, category, images } = req.body;
 
     const post = await Post.findById(id);
     if (!post) {
@@ -197,7 +206,7 @@ export const updatePost = async (req, res) => {
 
     const updatedPost = await Post.findByIdAndUpdate(
       id,
-      { title, body, tags, category, imageUrl },
+      { title, body, tags, category, images },
       { new: true }
     ).populate('author', 'name email profilePicture');
 

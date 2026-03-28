@@ -28,56 +28,73 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-light-beige to-accent-beige flex items-center justify-center px-4">
-      <div className="card max-w-md w-full">
-        <h1 className="section-title text-center mb-6">Welcome to UniConnect</h1>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="your@university.edu"
-              required
+    <div className="min-h-screen bg-gradient-to-br from-light-beige to-accent-beige">
+      <div className="h-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 h-screen">
+          {/* Left Side - Image */}
+          <div className="hidden md:flex items-center justify-center overflow-hidden">
+            <img 
+              src="/images/login.png" 
+              alt="UniConnect" 
+              className="w-full h-full object-cover"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="••••••••"
-              required
-            />
+          {/* Right Side - Form */}
+          <div className="flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-md">
+              <h1 className="section-title text-center mb-2">Welcome to UniConnect</h1>
+              <p className="text-center text-gray-600 mb-8">Sign in to your account</p>
+
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input-field"
+                    placeholder="your@university.edu"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-field"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary w-full"
+                >
+                  {loading ? 'Logging in...' : 'Login'}
+                </button>
+              </form>
+
+              <p className="text-center mt-6 text-sm">
+                Don't have an account?{' '}
+                <Link to="/register" className="text-primary-teal font-semibold hover:underline">
+                  Register here
+                </Link>
+              </p>
+            </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="text-center mt-6 text-sm">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-primary-teal font-semibold hover:underline">
-            Register here
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

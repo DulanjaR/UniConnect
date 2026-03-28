@@ -7,19 +7,34 @@ export default function CreatePost() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Predefined tags for SLIIT
+  const availableTags = [
+    'SLIIT Computing',
+    'SLIIT Engineering',
+    'Study Materials',
+    'Lecture Notes',
+    'Assignment Help',
+    'Exam Tips',
+    'Project Ideas',
+    'Placement Ready',
+    'Campus Life',
+    'Internship'
+  ];
+
   const [formData, setFormData] = useState({
     title: '',
     body: '',
-    tags: '',
+    tags: [],
     category: 'study',
-    imageUrl: ''
+    images: [] // Changed to array for multiple images
   });
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreviews, setImagePreviews] = useState([]); // Array of previews
+  const [validationErrors, setValidationErrors] = useState({});
 
   if (!user) {
     return (
@@ -37,34 +52,81 @@ export default function CreatePost() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear validation error for this field
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleTagChange = (tag) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter(t => t !== tag)
+        : [...prev.tags, tag]
+    }));
+    if (validationErrors.tags) {
+      setValidationErrors(prev => ({ ...prev, tags: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.title.trim()) {
+      errors.title = 'Title is required';
+    } else if (formData.title.trim().length < 5) {
+      errors.title = 'Title must be at least 5 characters';
+    } else if (formData.title.trim().length > 100) {
+      errors.title = 'Title must not exceed 100 characters';
+    }
+
+    if (!formData.body.trim()) {
+      errors.body = 'Content is required';
+    } else if (formData.body.trim().length < 20) {
+      errors.body = 'Content must be at least 20 characters';
+    }
+
+    if (formData.tags.length === 0) {
+      errors.tags = 'Please select at least one tag';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedImage(file);
+      setSelectedFile(file);
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result);
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, { preview: reader.result, file: null, url: null }]
+        }));
+        setImagePreviews(prev => [...prev, reader.result]);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadImage = async () => {
-    if (!selectedImage) {
-      setError('Please select an image');
+  const uploadImage = async (index) => {
+    if (!formData.images[index]) {
+      setError('Image not found');
       return;
     }
 
     setUploading(true);
     setError('');
     try {
-      const response = await postsAPI.uploadImage(selectedImage);
-      setFormData(prev => ({ ...prev, imageUrl: response.data.imageUrl }));
-      setSelectedImage(null);
-      setImagePreview('');
+      const response = await postsAPI.uploadImage(selectedFile);
+      // Update the specific image with the uploaded URL
+      const newImages = [...formData.images];
+      newImages[index] = { ...newImages[index], url: response.data.imageUrl };
+      setFormData(prev => ({ ...prev, images: newImages }));
+      setSelectedFile(null);
     } catch (err) {
       setError('Failed to upload image: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -72,33 +134,47 @@ export default function CreatePost() {
     }
   };
 
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, imageUrl: '' }));
-    setSelectedImage(null);
-    setImagePreview('');
+  const removeImage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      setError('Please fix the errors above');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const tags = formData.tags.split(',').map(t => t.trim()).filter(t => t);
+      // Get uploaded image URLs (filter out images that are still being uploaded)
+      const uploadedImages = formData.images
+        .filter(img => img.url)
+        .map(img => img.url);
 
       await postsAPI.create({
         title: formData.title,
         body: formData.body,
-        tags,
+        tags: formData.tags,
         category: formData.category,
-        imageUrl: formData.imageUrl,
+        images: uploadedImages, // Send array of image URLs
         year: user?.academicYear,
         semester: user?.semester
       });
 
       setSuccess(true);
-      setFormData({ title: '', body: '', tags: '', category: 'study', imageUrl: '' });
-      setImagePreview('');
+      setFormData({ title: '', body: '', tags: [], category: 'study', images: [] });
+      setImagePreviews([]);
+      setSelectedFile(null);
+      setValidationErrors({});
 
       setTimeout(() => {
         navigate('/');
@@ -129,6 +205,17 @@ export default function CreatePost() {
         )}
 
         <form onSubmit={handleSubmit} className="card space-y-6">
+          {Object.keys(validationErrors).length > 0 && (
+            <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4">
+              <p className="text-red-700 font-semibold mb-2">Please fix the following errors:</p>
+              <ul className="list-disc list-inside text-red-600 text-sm">
+                {validationErrors.title && <li>{validationErrors.title}</li>}
+                {validationErrors.body && <li>{validationErrors.body}</li>}
+                {validationErrors.tags && <li>{validationErrors.tags}</li>}
+              </ul>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-2">Title *</label>
             <input
@@ -136,10 +223,13 @@ export default function CreatePost() {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              required
               placeholder="e.g., Tips for calculus exam"
-              className="input-field"
+              className={`input-field ${validationErrors.title ? 'border-2 border-red-500 bg-red-50' : ''}`}
             />
+            {validationErrors.title && (
+              <p className="text-red-600 text-sm mt-1 font-medium">⚠️ {validationErrors.title}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">{formData.title.length}/100 characters</p>
           </div>
 
           <div>
@@ -148,11 +238,14 @@ export default function CreatePost() {
               name="body"
               value={formData.body}
               onChange={handleChange}
-              required
               placeholder="Write your post content here..."
               rows="8"
-              className="input-field resize-vertical"
+              className={`input-field resize-vertical ${validationErrors.body ? 'border-2 border-red-500 bg-red-50' : ''}`}
             />
+            {validationErrors.body && (
+              <p className="text-red-600 text-sm mt-1 font-medium">⚠️ {validationErrors.body}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">{formData.body.length}/5000 characters</p>
           </div>
 
           <div>
@@ -169,63 +262,76 @@ export default function CreatePost() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
-            <input
-              type="text"
-              name="tags"
-              value={formData.tags}
-              onChange={handleChange}
-              placeholder="e.g., mathematics, exam, tips"
-              className="input-field"
-            />
-            <p className="text-xs text-gray-500 mt-2">Add tags to help others find your post</p>
+            <label className="block text-sm font-medium mb-3">Tags (Select at least one) *</label>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded ${validationErrors.tags ? 'bg-red-50 border-2 border-red-500' : 'border border-gray-300'}`}>
+              {availableTags.map(tag => (
+                <label key={tag} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 rounded">
+                  <input
+                    type="checkbox"
+                    checked={formData.tags.includes(tag)}
+                    onChange={() => handleTagChange(tag)}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm">{tag}</span>
+                </label>
+              ))}
+            </div>
+            {validationErrors.tags && (
+              <p className="text-red-600 text-sm mt-2 font-medium">⚠️ {validationErrors.tags}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-2">Selected: {formData.tags.length > 0 ? formData.tags.join(', ') : 'None'}</p>
           </div>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-            <label className="block text-sm font-medium mb-4">Image (Optional)</label>
+            <label className="block text-sm font-medium mb-4">Images (Optional)</label>
             
-            {formData.imageUrl ? (
-              <div className="space-y-4">
-                <div className="relative inline-block">
-                  <img src={formData.imageUrl} alt="preview" className="max-w-xs h-48 object-cover rounded" />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
-                  >
-                    ✕
-                  </button>
+            {formData.images.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium mb-4">Added Images ({formData.images.length})</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {formData.images.map((img, index) => (
+                    <div key={index} className="relative">
+                      <img 
+                        src={img.preview} 
+                        alt={`preview ${index}`} 
+                        className="w-full aspect-square object-cover rounded border border-gray-300" 
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-50 rounded flex items-center justify-center opacity-0 hover:opacity-100 transition">
+                        {img.url ? (
+                          <span className="text-white text-sm font-medium">✓ Uploaded</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => uploadImage(index)}
+                            disabled={uploading}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:bg-gray-500"
+                          >
+                            {uploading ? 'Uploading...' : 'Upload'}
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-sm text-green-600">✓ Image uploaded successfully</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {imagePreview && (
-                  <div className="mb-4">
-                    <img src={imagePreview} alt="preview" className="max-w-xs h-48 object-cover rounded" />
-                  </div>
-                )}
-                
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                
-                {selectedImage && (
-                  <button
-                    type="button"
-                    onClick={uploadImage}
-                    disabled={uploading}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                  >
-                    {uploading ? 'Uploading...' : 'Upload Image'}
-                  </button>
-                )}
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-2">Supported formats: JPEG, PNG, GIF, WebP (Max 5MB)</p>
+
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p className="text-xs text-gray-500 mt-2">Supported formats: JPEG, PNG, GIF, WebP (Max 5MB each). You can add multiple images.</p>
+            </div>
           </div>
 
           <div className="flex gap-4">

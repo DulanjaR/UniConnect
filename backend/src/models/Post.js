@@ -12,7 +12,8 @@ const postSchema = new mongoose.Schema(
       required: true,
       default: 'study'
     },
-    imageUrl: { type: String },
+    images: [{ type: String }], // Array of image URLs (new)
+    imageUrl: { type: String }, // Kept for backwards compatibility with old posts
     isPublished: { type: Boolean, default: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     views: { type: Number, default: 0 },
@@ -26,6 +27,21 @@ const postSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Middleware: Convert old imageUrl to images array on retrieval
+postSchema.post(/^find/, function(docs) {
+  const convertPost = (post) => {
+    if (post && post.imageUrl && (!post.images || post.images.length === 0)) {
+      post.images = [post.imageUrl]; // Convert single imageUrl to images array
+    }
+  };
+
+  if (Array.isArray(docs)) {
+    docs.forEach(convertPost);
+  } else if (docs) {
+    convertPost(docs);
+  }
+});
 
 // Index for search and filtering
 postSchema.index({ title: 'text', body: 'text' });

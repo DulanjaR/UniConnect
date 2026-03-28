@@ -14,6 +14,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     fetchPost();
@@ -70,6 +71,28 @@ export default function PostDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={selectedImage} 
+              alt="Full view"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <button
@@ -115,16 +138,21 @@ export default function PostDetail() {
                 <img
                   src={post.images[0]}
                   alt={post.title}
-                  className="w-full aspect-square object-cover rounded-lg"
+                  onClick={() => setSelectedImage(post.images[0])}
+                  className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                 />
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {post.images.map((img, idx) => (
-                    <div key={idx} className="relative overflow-hidden rounded-lg bg-gray-200">
+                    <div 
+                      key={idx} 
+                      className="relative overflow-hidden rounded-lg bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setSelectedImage(img)}
+                    >
                       <img 
                         src={img} 
                         alt={`${post.title} ${idx}`}
-                        className="w-full aspect-square object-cover hover:scale-105 transition"
+                        className="w-full aspect-square object-cover"
                       />
                     </div>
                   ))}

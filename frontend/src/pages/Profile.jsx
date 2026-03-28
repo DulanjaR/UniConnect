@@ -301,14 +301,6 @@ export default function Profile() {
                   Edit Profile
                 </button>
               )}
-              {isOwnProfile && !isEditing && (
-                <button
-                  onClick={() => navigate('/create')}
-                  className="btn-secondary mt-2"
-                >
-                  Create Post
-                </button>
-              )}
             </div>
 
             {/* Profile Info */}

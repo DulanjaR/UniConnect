@@ -37,11 +37,32 @@ export default function PostDetail() {
   };
 
   const handleLike = async () => {
+    if (!post) return;
+
+    // Store original state for rollback
+    const originalPost = JSON.parse(JSON.stringify(post));
+    const originalIsLiked = isLiked;
+
+    // Optimistic update
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+
+    const updatedPost = { ...post };
+    if (newIsLiked) {
+      // Add like
+      updatedPost.likes = [...(updatedPost.likes || []), { _id: user?.id }];
+    } else {
+      // Remove like
+      updatedPost.likes = updatedPost.likes?.filter(like => like._id !== user?.id) || [];
+    }
+    setPost(updatedPost);
+
     try {
       await postsAPI.like(postId);
-      setIsLiked(!isLiked);
-      fetchPost();
     } catch (err) {
+      // Rollback on error
+      setPost(originalPost);
+      setIsLiked(originalIsLiked);
       console.error('Error liking post:', err);
     }
   };

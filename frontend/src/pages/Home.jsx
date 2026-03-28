@@ -50,19 +50,58 @@ export default function Home() {
   };
 
   const handleLike = async (postId) => {
+    const postIndex = posts.findIndex(p => p._id === postId);
+    if (postIndex === -1) return;
+
+    // Store original state for rollback
+    const originalPosts = JSON.parse(JSON.stringify(posts));
+    
+    // Optimistic update: immediately update the UI
+    const isCurrentlyLiked = posts[postIndex].likes?.some(like => like._id === user.id || like === user.id);
+    const updatedPosts = [...posts];
+    
+    if (isCurrentlyLiked) {
+      // Remove like
+      updatedPosts[postIndex].likes = updatedPosts[postIndex].likes.filter(
+        like => like._id !== user.id && like !== user.id
+      );
+    } else {
+      // Add like
+      updatedPosts[postIndex].likes = [
+        ...(updatedPosts[postIndex].likes || []),
+        { _id: user.id }
+      ];
+    }
+    
+    setPosts(updatedPosts);
+
     try {
       await postsAPI.like(postId);
-      fetchPosts();
     } catch (err) {
+      // Rollback on error
+      setPosts(originalPosts);
       console.error('Error liking post:', err);
     }
   };
 
   const handleShare = async (postId) => {
+    const postIndex = posts.findIndex(p => p._id === postId);
+    if (postIndex === -1) return;
+
+    // Store original state for rollback
+    const originalPosts = JSON.parse(JSON.stringify(posts));
+    
+    // Optimistic update
+    const updatedPosts = [...posts];
+    updatedPosts[postIndex].shares = (updatedPosts[postIndex].shares || []).length + 1;
+    
+    setPosts(updatedPosts);
+
     try {
       await postsAPI.share(postId);
-      fetchPosts();
     } catch (err) {
+      // Rollback on error
+      setPosts(originalPosts);
       console.error('Error sharing post:', err);
     }
   };
@@ -260,13 +299,22 @@ export default function Home() {
                 {/* Like and Share buttons - below everything */}
                 {user && (
                   <div className="flex gap-2 border-t pt-3">
-                    <button
-                      onClick={() => handleLike(post._id)}
-                      className="text-primary-teal hover:text-secondary-teal font-semibold px-3 py-2 hover:bg-teal-50 rounded transition-colors"
-                    >
-                      <Heart className="w-4 h-4 inline mr-1" />
-                      Like
-                    </button>
+                    {(() => {
+                      const isLiked = post.likes?.some(like => like._id === user.id || like === user.id);
+                      return (
+                        <button
+                          onClick={() => handleLike(post._id)}
+                          className={`font-semibold px-3 py-2 rounded transition-colors flex items-center gap-1 ${
+                            isLiked
+                              ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                              : 'text-primary-teal hover:text-secondary-teal hover:bg-teal-50'
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+                          Like
+                        </button>
+                      );
+                    })()}
                     <button
                       onClick={() => handleShare(post._id)}
                       className="text-primary-teal hover:text-secondary-teal font-semibold px-3 py-2 hover:bg-teal-50 rounded transition-colors"

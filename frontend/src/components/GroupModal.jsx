@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 
 export default function GroupModal({ isOpen, onClose, onGroupCreated }) {
@@ -8,6 +8,9 @@ export default function GroupModal({ isOpen, onClose, onGroupCreated }) {
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState({});
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(null);
+  const suggestionTimeoutRef = useRef({});
 
   const handleAddMemberField = () => {
     setItNumbers([...itNumbers, '']);
@@ -15,12 +18,62 @@ export default function GroupModal({ isOpen, onClose, onGroupCreated }) {
 
   const handleRemoveMemberField = (index) => {
     setItNumbers(itNumbers.filter((_, i) => i !== index));
+    setSuggestions(prev => {
+      const newSuggestions = { ...prev };
+      delete newSuggestions[index];
+      return newSuggestions;
+    });
+  };
+
+  const fetchSuggestions = async (index, value) => {
+    if (value.trim().length === 0) {
+      setSuggestions(prev => {
+        const newSuggestions = { ...prev };
+        delete newSuggestions[index];
+        return newSuggestions;
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/search-by-it?itNumber=${encodeURIComponent(value)}`);
+      const data = await response.json();
+      setSuggestions(prev => ({
+        ...prev,
+        [index]: data
+      }));
+    } catch (err) {
+      console.error('Error fetching suggestions:', err);
+    }
   };
 
   const handleMemberChange = (index, value) => {
     const newItNumbers = [...itNumbers];
     newItNumbers[index] = value;
     setItNumbers(newItNumbers);
+    setActiveSuggestionIndex(null);
+
+    // Clear previous timeout
+    if (suggestionTimeoutRef.current[index]) {
+      clearTimeout(suggestionTimeoutRef.current[index]);
+    }
+
+    // Fetch suggestions after user stops typing for 300ms
+    suggestionTimeoutRef.current[index] = setTimeout(() => {
+      fetchSuggestions(index, value);
+    }, 300);
+  };
+
+  const handleSuggestionSelect = (index, user) => {
+    const newItNumbers = [...itNumbers];
+    newItNumbers[index] = user.itNumber;
+    setItNumbers(newItNumbers);
+    setSuggestions(prev => {
+      const newSuggestions = { ...prev };
+      delete newSuggestions[index];
+      return newSuggestions;
+    });
+    setActiveSuggestionIndex(null);
   };
 
   const handleSubmit = async (e) => {
@@ -132,22 +185,55 @@ export default function GroupModal({ isOpen, onClose, onGroupCreated }) {
             </label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {itNumbers.map((itNumber, index) => (
-                <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={itNumber}
-                    onChange={(e) => handleMemberChange(index, e.target.value)}
-                    placeholder="e.g., IT001234"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                  {itNumbers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMemberField(index)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                <div key={index} className="relative">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={itNumber}
+                      onChange={(e) => handleMemberChange(index, e.target.value)}
+                      placeholder="e.g., IT001234"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      autoComplete="off"
+                    />
+                    {itNumbers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMemberField(index)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Suggestions Dropdown */}
+                  {suggestions[index] && suggestions[index].length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                      {suggestions[index].map((user, suggestionIdx) => (
+                        <button
+                          key={user._id}
+                          type="button"
+                          onClick={() => handleSuggestionSelect(index, user)}
+                          onMouseEnter={() => setActiveSuggestionIndex(suggestionIdx)}
+                          onMouseLeave={() => setActiveSuggestionIndex(null)}
+                          className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between ${
+                            activeSuggestionIndex === suggestionIdx
+                              ? 'bg-blue-50'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{user.itNumber}</div>
+                            <div className="text-xs text-gray-500">{user.name}</div>
+                            {user.academicYear && (
+                              <div className="text-xs text-gray-400">
+                                Year {user.academicYear} Sem {user.semester}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}

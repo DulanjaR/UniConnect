@@ -1,11 +1,18 @@
 import express from 'express';
-import { register, login, getUserProfile, updateProfile } from '../controllers/authController.js';
+import { requestOTP, verifyOTPAndRegister, resendOTP, login, getUserProfile, updateProfile } from '../controllers/authController.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/register', register);
+// OTP-based registration flow
+router.post('/request-otp', requestOTP);
+router.post('/verify-otp', verifyOTPAndRegister);
+router.post('/resend-otp', resendOTP);
+
+// Login
 router.post('/login', login);
+
+// Profile (protected routes)
 router.get('/profile', authMiddleware, getUserProfile);
 router.put('/profile', authMiddleware, updateProfile);
 

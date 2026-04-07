@@ -113,7 +113,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-light-beige">
+      <div className="min-h-screen bg-modern-bg">
         <AppContent />
       </div>
     </AuthProvider>

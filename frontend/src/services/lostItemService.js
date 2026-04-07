@@ -2,8 +2,8 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api/lost-items";
 
-export const getItems = async () => {
-  return axios.get(API);
+export const getItems = async (params = {}) => {
+  return axios.get(API, { params });
 };
 
 export const createItem = async (data, token) => {

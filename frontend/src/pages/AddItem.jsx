@@ -115,7 +115,7 @@ function AddItem() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light-beige p-6">
+    <div className="min-h-screen flex items-center justify-center bg-vibrant-gradient p-6 relative">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-lg">
 
         <h2 className="text-2xl font-bold mb-6 text-center">

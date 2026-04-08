@@ -20,6 +20,28 @@ export const AuthProvider = ({ children }) => {
       setUser(JSON.parse(storedUser));
       // Set default axios header
       axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      
+      // Validate token is still valid by checking if we can fetch profile
+      const validateToken = async () => {
+        try {
+          const res = await axios.get(`${API_URL}/auth/profile`, {
+            headers: { Authorization: `Bearer ${storedToken}` }
+          });
+          // Token is valid, update user with fresh data
+          setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
+        } catch (err) {
+          // Token is invalid, clear storage
+          console.log('Token validation failed, clearing auth');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+          delete axios.defaults.headers.common['Authorization'];
+        }
+      };
+      
+      validateToken();
     }
 
     setLoading(false);

@@ -178,7 +178,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-light-beige to-accent-beige">
+    <div className="min-h-screen bg-gradient-vibrant">
       <div className="h-full">
         <div className="grid grid-cols-1 md:grid-cols-2 h-screen">
           {/* Left Side - Image */}
@@ -193,7 +193,7 @@ export default function Register() {
           {/* Right Side - Form */}
           <div className="flex items-center justify-center px-4 py-8 overflow-y-auto">
             <div className="w-full max-w-md">
-              <h1 className="section-title text-center mb-2">Join UniConnect</h1>
+              <h1 className="section-title-accent text-center mb-2">Join UniConnect</h1>
               <p className="text-center text-gray-600 mb-6">Create your account</p>
 
               {error && (
@@ -405,7 +405,7 @@ export default function Register() {
                         type="button"
                         onClick={resendOTP}
                         disabled={loading}
-                        className="text-primary-teal font-semibold hover:underline"
+                        className="text-primary-blue font-semibold hover:underline"
                       >
                                 Resend OTP
                       </button>
@@ -416,7 +416,7 @@ export default function Register() {
 
               <p className="text-center mt-6 text-sm">
                 Already have an account?{' '}
-                <Link to="/login" className="text-primary-teal font-semibold hover:underline">
+                <Link to="/login" className="text-accent-orange font-semibold hover:underline">
                   Login here
                 </Link>
               </p>

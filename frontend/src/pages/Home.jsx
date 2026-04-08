@@ -107,7 +107,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-light-beige">
+    <div className="min-h-screen bg-hero-gradient relative">
       {/* Image Modal */}
       {selectedImage && (
         <div 
@@ -138,7 +138,7 @@ export default function Home() {
         </div>
 
         {/* Filters */}
-        <div className="card mb-8">
+        <div className="card mb-8 border-l-4 border-l-accent-orange shadow-lg shadow-blue-400/10 bg-white/80 backdrop-blur-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Search</label>
@@ -190,7 +190,7 @@ export default function Home() {
               <div className="flex items-end">
                 <Link
                   to="/create"
-                  className="btn-primary w-full text-center"
+                  className="btn-warm w-full text-center"
                 >
                   New Post
                 </Link>
@@ -222,7 +222,7 @@ export default function Home() {
                 <Link to={`/post/${post._id}`} className="block hover:no-underline">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-                      <h2 className="text-xl font-bold text-primary-teal hover:text-secondary-teal">
+                      <h2 className="text-xl font-bold text-primary-blue hover:text-primary-blue-light">
                         {post.title}
                       </h2>
                       <p className="text-sm text-gray-500">
@@ -307,7 +307,7 @@ export default function Home() {
                           className={`font-semibold px-3 py-2 rounded transition-colors flex items-center gap-1 ${
                             isLiked
                               ? 'text-red-600 bg-red-50 hover:bg-red-100'
-                              : 'text-primary-teal hover:text-secondary-teal hover:bg-teal-50'
+                              : 'text-primary-blue hover:text-primary-blue-light hover:bg-blue-50'
                           }`}
                         >
                           <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -317,7 +317,7 @@ export default function Home() {
                     })()}
                     <button
                       onClick={() => handleShare(post._id)}
-                      className="text-primary-teal hover:text-secondary-teal font-semibold px-3 py-2 hover:bg-teal-50 rounded transition-colors"
+                      className="text-primary-blue hover:text-primary-blue-light font-semibold px-3 py-2 hover:bg-blue-50 rounded transition-colors"
                     >
                       <Share2 className="w-4 h-4 inline mr-1" />
                       Share

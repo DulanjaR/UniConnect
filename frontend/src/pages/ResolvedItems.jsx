@@ -30,7 +30,7 @@ function ResolvedItems() {
           {items.map((item) => (
             <div
               key={item._id}
-              onClick={() => navigate(`/item/${item._id}`)}
+              onClick={() => navigate(`/resolved-item/${item._id}`)}
               className="flex justify-between items-center bg-white p-5 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
             >
               <div className="flex-1">

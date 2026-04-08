@@ -3,6 +3,7 @@ import axios from "axios";
 
 function AdminClaims() {
   const [claims, setClaims] = useState([]);
+  const [updatingId, setUpdatingId] = useState(null);
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -16,7 +17,9 @@ function AdminClaims() {
           Authorization: `Bearer ${token}`,
         },
       });
-      setClaims(res.data);
+
+      // Show only pending claims in admin review
+      setClaims(res.data.filter((claim) => claim.status === "pending"));
     } catch (err) {
       console.error(err);
     }
@@ -24,6 +27,8 @@ function AdminClaims() {
 
   const handleApprove = async (id) => {
     try {
+      setUpdatingId(id);
+
       await axios.put(
         `http://localhost:5000/api/claims/${id}/approve`,
         {},
@@ -33,15 +38,29 @@ function AdminClaims() {
           },
         }
       );
-      fetchClaims();
+
+      // Show approved state briefly before removing the card
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === id ? { ...claim, status: "approved" } : claim
+        )
+      );
+
+      setTimeout(() => {
+        setClaims((prev) => prev.filter((claim) => claim._id !== id));
+        setUpdatingId(null);
+      }, 1500);
     } catch (err) {
       console.error(err);
       alert("Failed to approve claim");
+      setUpdatingId(null);
     }
   };
 
   const handleReject = async (id) => {
     try {
+      setUpdatingId(id);
+
       await axios.put(
         `http://localhost:5000/api/claims/${id}/reject`,
         {},
@@ -51,10 +70,22 @@ function AdminClaims() {
           },
         }
       );
-      fetchClaims();
+
+      // Show rejected state briefly before removing the card
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim._id === id ? { ...claim, status: "rejected" } : claim
+        )
+      );
+
+      setTimeout(() => {
+        setClaims((prev) => prev.filter((claim) => claim._id !== id));
+        setUpdatingId(null);
+      }, 1500);
     } catch (err) {
       console.error(err);
       alert("Failed to reject claim");
+      setUpdatingId(null);
     }
   };
 
@@ -84,7 +115,7 @@ function AdminClaims() {
 
         {claims.length === 0 ? (
           <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">
-            No claims found
+            No pending claims found
           </div>
         ) : (
           <div className="space-y-5">
@@ -94,7 +125,6 @@ function AdminClaims() {
                 className="bg-white rounded-2xl shadow-md hover:shadow-lg transition p-5"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  
                   {/* Claimant Details */}
                   <div className="space-y-3">
                     <h3 className="text-xl font-semibold text-gray-800">
@@ -106,19 +136,22 @@ function AdminClaims() {
                         <span className="font-semibold">Name:</span> {claim.name}
                       </p>
                       <p>
-                        <span className="font-semibold">Student ID:</span> {claim.studentId}
+                        <span className="font-semibold">Student ID:</span>{" "}
+                        {claim.studentId}
                       </p>
                       <p>
                         <span className="font-semibold">Email:</span> {claim.email}
                       </p>
                       {claim.userId?.name && (
                         <p>
-                          <span className="font-semibold">User Account:</span> {claim.userId.name}
+                          <span className="font-semibold">User Account:</span>{" "}
+                          {claim.userId.name}
                         </p>
                       )}
                       {claim.userId?.email && (
                         <p>
-                          <span className="font-semibold">Account Email:</span> {claim.userId.email}
+                          <span className="font-semibold">Account Email:</span>{" "}
+                          {claim.userId.email}
                         </p>
                       )}
                       <p>
@@ -159,13 +192,16 @@ function AdminClaims() {
                     {claim.itemId ? (
                       <div className="space-y-2 text-gray-700">
                         <p>
-                          <span className="font-semibold">Title:</span> {claim.itemId.title}
+                          <span className="font-semibold">Title:</span>{" "}
+                          {claim.itemId.title}
                         </p>
                         <p>
-                          <span className="font-semibold">Location:</span> {claim.itemId.location || "N/A"}
+                          <span className="font-semibold">Location:</span>{" "}
+                          {claim.itemId.location || "N/A"}
                         </p>
                         <p>
-                          <span className="font-semibold">Category:</span> {claim.itemId.category || "N/A"}
+                          <span className="font-semibold">Category:</span>{" "}
+                          {claim.itemId.category || "N/A"}
                         </p>
                         <p>
                           <span className="font-semibold">Type:</span>{" "}
@@ -200,37 +236,43 @@ function AdminClaims() {
                         Actions
                       </h3>
                       <p className="text-sm text-gray-500 mb-4">
-                        Review the submitted details and decide whether to approve or reject the claim.
+                        Review the submitted details and decide whether to approve
+                        or reject the claim.
                       </p>
                     </div>
 
                     <div className="flex flex-row lg:flex-col gap-3">
-                      <button
-                        onClick={() => handleApprove(claim._id)}
-                        disabled={claim.status === "approved"}
-                        className={`px-4 py-2 rounded-lg text-white font-medium ${
-                          claim.status === "approved"
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-green-600 hover:bg-green-700"
-                        }`}
-                      >
-                        Approve
-                      </button>
+                      {updatingId === claim._id ? (
+                        <div
+                          className={`px-4 py-2 rounded-lg text-center font-semibold transition-all duration-300 ${
+                            claim.status === "approved"
+                              ? "bg-green-100 text-green-700 border border-green-300"
+                              : "bg-red-100 text-red-700 border border-red-300"
+                          }`}
+                        >
+                          {claim.status === "approved"
+                            ? "✅ Approved"
+                            : "❌ Rejected"}
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleApprove(claim._id)}
+                            className="px-4 py-2 rounded-lg text-white font-medium bg-green-600 hover:bg-green-700 transition"
+                          >
+                            Approve
+                          </button>
 
-                      <button
-                        onClick={() => handleReject(claim._id)}
-                        disabled={claim.status === "rejected"}
-                        className={`px-4 py-2 rounded-lg text-white font-medium ${
-                          claim.status === "rejected"
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-red-600 hover:bg-red-700"
-                        }`}
-                      >
-                        Reject
-                      </button>
+                          <button
+                            onClick={() => handleReject(claim._id)}
+                            className="px-4 py-2 rounded-lg text-white font-medium bg-red-600 hover:bg-red-700 transition"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-
                 </div>
               </div>
             ))}

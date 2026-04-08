@@ -18,6 +18,7 @@ import EditItem from "./pages/EditItem";
 import GroupsPage from './pages/GroupsPage';
 import AdminClaims from "./pages/AdminClaims";
 import ResolvedItems from "./pages/ResolvedItems";
+import ResolvedItemDetails from "./pages/ResolvedItemDetails";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -63,6 +64,7 @@ function AppContent() {
         <Route path="/post/:postId" element={<PostDetail />} />
         <Route path="/admin-claims" element={<AdminClaims />} />
         <Route path="/resolved-items" element={<ResolvedItems />} />
+        <Route path="/resolved-item/:id" element={<ResolvedItemDetails />} />
 
         {/* Protected routes */}
         <Route

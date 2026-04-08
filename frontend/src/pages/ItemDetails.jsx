@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function ItemDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [item, setItem] = useState(null);
   const [claim, setClaim] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [claimForm, setClaimForm] = useState({
     name: "",
@@ -35,21 +37,25 @@ function ItemDetails() {
       const res = await axios.get(`http://localhost:5000/api/claims/item/${id}`);
       setClaim(res.data);
     } catch (err) {
-      console.log("No claim yet");
       setClaim(null);
     }
   };
 
   const handleClaimChange = (e) => {
-    setClaimForm({ ...claimForm, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setClaimForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFile = (e) => {
-    setClaimForm({ ...claimForm, idCardImage: e.target.files[0] });
+    setClaimForm((prev) => ({
+      ...prev,
+      idCardImage: e.target.files[0],
+    }));
   };
 
   const handleClaimSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     try {
       const token = localStorage.getItem("token");
@@ -74,6 +80,8 @@ function ItemDetails() {
     } catch (err) {
       console.error(err);
       alert("Error submitting claim");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -92,54 +100,53 @@ function ItemDetails() {
       );
 
       alert("Item marked as resolved");
-      fetchItem();
+      navigate("/lost-found");
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Failed to mark item as resolved");
     }
   };
 
-  if (!item) return <p className="p-6 text-center">Loading...</p>;
-
-  const shouldBlurContact =
-    item.itemType === "found" && claim?.status !== "approved";
-
   const renderClaimStatusBadge = () => {
     if (!claim?.status) return null;
 
-    if (claim.status === "pending") {
-      return (
-        <span className="inline-flex items-center bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-semibold">
-          🟡 Pending
-        </span>
-      );
-    }
+    const badgeStyles = {
+      pending: "bg-yellow-100 text-yellow-700",
+      approved: "bg-green-100 text-green-700",
+      rejected: "bg-red-100 text-red-700",
+    };
 
-    if (claim.status === "approved") {
-      return (
-        <span className="inline-flex items-center bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
-          🟢 Approved
-        </span>
-      );
-    }
+    const badgeIcons = {
+      pending: "🟡 Pending",
+      approved: "🟢 Approved",
+      rejected: "🔴 Rejected",
+    };
 
-    if (claim.status === "rejected") {
-      return (
-        <span className="inline-flex items-center bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold">
-          🔴 Rejected
-        </span>
-      );
-    }
-
-    return null;
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+          badgeStyles[claim.status] || "bg-gray-100 text-gray-700"
+        }`}
+      >
+        {badgeIcons[claim.status] || claim.status}
+      </span>
+    );
   };
+
+  if (!item) return <p className="p-6 text-center">Loading...</p>;
+
+  const isFoundItem = item.itemType === "found";
+  const isResolved = item.status === "resolved";
+  const isApproved = claim?.status === "approved";
+  const isPending = claim?.status === "pending";
+  const isRejected = claim?.status === "rejected";
+
+  const shouldBlurContact = isFoundItem && !isApproved;
 
   return (
     <div className="p-6 flex justify-center">
       <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-4xl">
-        <h2 className="text-3xl font-bold mb-4 text-gray-800">
-          {item.title}
-        </h2>
+        <h2 className="text-3xl font-bold mb-4 text-gray-800">{item.title}</h2>
 
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex flex-wrap gap-3">
@@ -176,19 +183,19 @@ function ItemDetails() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {item.itemType === "lost" ? (
-                <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-semibold">
-                  🔴 Lost Item
-                </span>
-              ) : (
+              {isFoundItem ? (
                 <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-semibold">
                   🟢 Found Item
                 </span>
+              ) : (
+                <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-semibold">
+                  🔴 Lost Item
+                </span>
               )}
 
-              {item.itemType === "found" && renderClaimStatusBadge()}
+              {isFoundItem && renderClaimStatusBadge()}
 
-              {item.status === "resolved" && (
+              {isResolved && (
                 <span className="inline-flex items-center bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
                   ✅ Resolved
                 </span>
@@ -217,19 +224,17 @@ function ItemDetails() {
             </p>
           </div>
 
-          {item.itemType === "found" && claim?.status === "pending" && (
-            <p className="text-yellow-600 mt-2">
-              ⏳ Waiting for admin approval
-            </p>
+          {isFoundItem && isPending && (
+            <p className="text-yellow-600 mt-2">⏳ Waiting for admin approval</p>
           )}
 
-          {item.itemType === "found" && claim?.status === "approved" && (
+          {isFoundItem && isApproved && !isResolved && (
             <p className="text-green-600 mt-2">
               ✅ Approved! You can contact the owner
             </p>
           )}
 
-          {item.itemType === "found" && claim?.status === "rejected" && (
+          {isFoundItem && isRejected && (
             <p className="text-red-600 mt-2">
               ❌ Your claim was rejected by admin
             </p>
@@ -237,7 +242,7 @@ function ItemDetails() {
         </div>
 
         <div className="mt-6">
-          {item.itemType === "found" && !claim && item.status !== "resolved" && (
+          {isFoundItem && !claim && !isResolved && (
             <button
               onClick={() => setShowForm(true)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
@@ -272,20 +277,34 @@ function ItemDetails() {
                 required
               />
 
-              <input
-                type="file"
-                onChange={handleFile}
-                className="border p-2 w-full rounded"
-                required
-              />
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFile}
+                  className="border p-2 w-full rounded"
+                  required
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Please upload your student ID card photo
+                </p>
+              </div>
 
-              <button className="bg-blue-600 text-white px-4 py-2 rounded">
-                Submit Claim
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-4 py-2 rounded text-white transition ${
+                  isSubmitting
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Claim"}
               </button>
             </form>
           )}
 
-          {claim?.status === "approved" && item.status !== "resolved" && (
+          {isApproved && !isResolved && (
             <button
               onClick={handleResolve}
               className="bg-purple-600 text-white px-4 py-2 rounded mt-4"
@@ -294,7 +313,7 @@ function ItemDetails() {
             </button>
           )}
 
-          {item.itemType === "lost" && item.status !== "resolved" && (
+          {!isFoundItem && !isResolved && (
             <button
               onClick={handleResolve}
               className="bg-purple-600 text-white px-4 py-2 rounded mt-4"

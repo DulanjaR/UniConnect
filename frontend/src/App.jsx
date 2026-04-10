@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import MyItems from "./pages/MyItems";
 import EditItem from "./pages/EditItem";
 import GroupsPage from './pages/GroupsPage';
+import GroupChatPage from './pages/GroupChatPage';
 import AdminClaims from "./pages/AdminClaims";
 import ResolvedItems from "./pages/ResolvedItems";
 import ResolvedItemDetails from "./pages/ResolvedItemDetails";
@@ -80,6 +81,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <GroupsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId/chat"
+          element={
+            <ProtectedRoute>
+              <GroupChatPage />
             </ProtectedRoute>
           }
         />

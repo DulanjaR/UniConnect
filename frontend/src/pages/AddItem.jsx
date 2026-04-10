@@ -12,10 +12,11 @@ function AddItem() {
     dateOfIncident: "",
     contactEmail: "",
     contactPhone: "",
-    images: null
+    images: null,
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   // ✅ HANDLE CHANGE WITH VALIDATION
@@ -47,8 +48,8 @@ function AddItem() {
 
     // 🖼 IMAGE REQUIRED IF FOUND
     if (name === "itemType") {
-      if (value === "found" && !form.images) {
-        newErrors.images = "Image is required for found items";
+      if (value === "found" && (!form.images || form.images.length === 0)) {
+        newErrors.images = "Please upload at least one image for found items";
       } else {
         delete newErrors.images;
       }
@@ -60,70 +61,89 @@ function AddItem() {
 
   // ✅ HANDLE IMAGE CHANGE
   const handleImageChange = (e) => {
-    const files = e.target.files;
+    const files = Array.from(e.target.files);
     let newErrors = { ...errors };
 
-    if (form.itemType === "found" && (!files || files.length === 0)) {
-      newErrors.images = "Image is required for found items";
-    } else {
-      delete newErrors.images;
+    // Check if files are selected
+    if (!files || files.length === 0) {
+      if (form.itemType === "found") {
+        newErrors.images = "Please upload at least one image for found items";
+      } else {
+        delete newErrors.images;
+      }
+
+      setErrors(newErrors);
+      setForm({ ...form, images: null });
+      return;
     }
 
+    // Validate all selected files are images
+    const invalidFiles = files.filter((file) => !file.type.startsWith("image/"));
+
+    if (invalidFiles.length > 0) {
+      newErrors.images = "Only image files are allowed";
+      setErrors(newErrors);
+      setForm({ ...form, images: null });
+      e.target.value = "";
+      return;
+    }
+
+    delete newErrors.images;
     setErrors(newErrors);
     setForm({ ...form, images: files });
   };
 
-  // ✅ HANDLE SUBMIT
+  //  HANDLE SUBMIT
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    let newErrors = { ...errors };
+  let newErrors = { ...errors };
 
-    // 🚫 FINAL CHECK: image required if found
-    if (form.itemType === "found" && !form.images) {
-      newErrors.images = "Image is required for found items";
-    }
+  if (form.itemType === "found" && (!form.images || form.images.length === 0)) {
+    newErrors.images = "Please upload at least one image for found items";
+  }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      alert("Please fix validation errors");
-      return;
-    }
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    alert("Please fix validation errors");
+    return;
+  }
 
-    const token = localStorage.getItem("token");
+  setIsSubmitting(true); // ✅ START LOADING
 
-    const formData = new FormData();
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
 
-    Object.keys(form).forEach((key) => {
-      if (key === "images" && form.images) {
-        for (let i = 0; i < form.images.length; i++) {
-          formData.append("images", form.images[i]);
-        }
-      } else {
-        formData.append(key, form[key]);
+  Object.keys(form).forEach((key) => {
+    if (key === "images" && form.images) {
+      for (let i = 0; i < form.images.length; i++) {
+        formData.append("images", form.images[i]);
       }
-    });
-
-    try {
-      await createItem(formData, token);
-      alert("Item added successfully");
-      navigate("/lost-found");
-    } catch (err) {
-      console.error(err);
-      alert("Error adding item");
+    } else {
+      formData.append(key, form[key]);
     }
-  };
+  });
+
+  try {
+    await createItem(formData, token);
+    alert("Item added successfully");
+    navigate("/lost-found");
+  } catch (err) {
+    console.error(err);
+    alert("Error adding item");
+  } finally {
+    setIsSubmitting(false); // ✅ STOP LOADING
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-vibrant-gradient p-6 relative">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-lg">
-
         <h2 className="text-2xl font-bold mb-6 text-center">
           Add Lost/Found Item
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <input
             name="title"
             placeholder="Title"
@@ -178,7 +198,6 @@ function AddItem() {
             className="border p-3 w-full rounded-lg"
           />
 
-          {/* 📞 PHONE */}
           <input
             name="contactPhone"
             placeholder="Contact Phone"
@@ -191,7 +210,6 @@ function AddItem() {
             <p className="text-red-500 text-sm">{errors.contactPhone}</p>
           )}
 
-          {/* 📅 DATE */}
           <input
             type="date"
             name="dateOfIncident"
@@ -206,21 +224,33 @@ function AddItem() {
           )}
 
           {/* 🖼 IMAGE */}
-          <input
-            type="file"
-            name="images"
-            multiple
-            onChange={handleImageChange}
-            className="border p-2 w-full rounded"
-          />
-          {errors.images && (
-            <p className="text-red-500 text-sm">{errors.images}</p>
-          )}
+          <div>
+            <input
+              type="file"
+              name="images"
+              accept="image/*"
+              multiple
+              onChange={handleImageChange}
+              className="border p-2 w-full rounded"
+            />
+            <p className="text-gray-600 text-sm mt-1">
+              Please upload image files only (JPG, PNG, JPEG, WEBP, etc.)
+            </p>
+            {errors.images && (
+              <p className="text-red-500 text-sm mt-1">{errors.images}</p>
+            )}
+          </div>
 
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition">
-            Submit
+          <button
+           type="submit"
+           disabled={isSubmitting}
+           className={`w-full py-3 rounded-lg font-semibold transition 
+           ${isSubmitting 
+           ? "bg-gray-400 cursor-not-allowed" 
+           : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          >
+          {isSubmitting ? "Submitting..." : "Submit"}
           </button>
-
         </form>
       </div>
     </div>

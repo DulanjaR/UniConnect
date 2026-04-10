@@ -6,16 +6,38 @@ export const createGroup = async (req, res) => {
   try {
     const { name, description, memberITNumbers, isPrivate } = req.body;
     const creatorId = req.user.userId;
+    const normalizedName = name?.trim();
+    const normalizedDescription = description?.trim() || '';
+    const normalizedITNumbers = [
+      ...new Set(
+        (memberITNumbers || [])
+          .map((itNumber) => itNumber?.trim().toUpperCase())
+          .filter(Boolean)
+      )
+    ];
 
-    if (!name || !memberITNumbers || memberITNumbers.length === 0) {
+    if (!normalizedName || normalizedITNumbers.length === 0) {
       return res.status(400).json({ message: 'Group name and at least one IT number required' });
     }
 
+    const creator = await User.findById(creatorId).select('_id itNumber');
+    if (!creator) {
+      return res.status(404).json({ message: 'Creator not found' });
+    }
+
     // Find users by IT numbers
-    const users = await User.find({ itNumber: { $in: memberITNumbers } });
+    const users = await User.find({ itNumber: { $in: normalizedITNumbers } });
     
     if (users.length === 0) {
       return res.status(404).json({ message: 'No users found with provided IT numbers' });
+    }
+
+    const foundITNumbers = new Set(users.map((user) => user.itNumber));
+    const missingITNumbers = normalizedITNumbers.filter((itNumber) => !foundITNumbers.has(itNumber));
+    if (missingITNumbers.length > 0) {
+      return res.status(404).json({
+        message: `Users not found for IT number(s): ${missingITNumbers.join(', ')}`
+      });
     }
 
     // Create members array
@@ -28,36 +50,27 @@ export const createGroup = async (req, res) => {
     // Ensure creator is in the group
     const creatorExists = members.find(m => m.userId.toString() === creatorId);
     if (!creatorExists) {
-      const creator = await User.findById(creatorId);
-      if (creator) {
-        members.push({
-          userId: creatorId,
-          itNumber: creator.itNumber,
-          joinedAt: new Date()
-        });
-      }
+      members.push({
+        userId: creatorId,
+        itNumber: creator.itNumber,
+        joinedAt: new Date()
+      });
     }
 
     const group = await Group.create({
-      name,
-      description,
+      name: normalizedName,
+      description: normalizedDescription,
       creator: creatorId,
       members,
-      memberITNumbers: [...new Set([...memberITNumbers, users[0].itNumber])],
-      isPrivate: isPrivate || false,
+      memberITNumbers: [...new Set(members.map((member) => member.itNumber))],
+      isPrivate: Boolean(isPrivate),
       status: 'active'
     });
 
-    // Add group to users' groups array
+    // Add group to all members' groups array without duplicates
     await User.updateMany(
-      { itNumber: { $in: memberITNumbers } },
-      { $push: { groups: group._id } }
-    );
-
-    await User.findByIdAndUpdate(
-      creatorId,
-      { $push: { groups: group._id } },
-      { new: true }
+      { _id: { $in: members.map((member) => member.userId) } },
+      { $addToSet: { groups: group._id } }
     );
 
     const populatedGroup = await group.populate('members.userId', 'name email profilePicture itNumber');
@@ -116,8 +129,12 @@ export const getGroup = async (req, res) => {
 export const addMemberToGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { itNumber } = req.body;
+    const normalizedITNumber = req.body.itNumber?.trim().toUpperCase();
     const userId = req.user.userId;
+
+    if (!normalizedITNumber) {
+      return res.status(400).json({ message: 'IT number is required' });
+    }
 
     const group = await Group.findById(groupId);
     if (!group) {
@@ -130,12 +147,12 @@ export const addMemberToGroup = async (req, res) => {
     }
 
     // Check if IT number already in group
-    if (group.memberITNumbers.includes(itNumber)) {
+    if (group.memberITNumbers.includes(normalizedITNumber)) {
       return res.status(400).json({ message: 'User already in group' });
     }
 
     // Find user by IT number
-    const user = await User.findOne({ itNumber });
+    const user = await User.findOne({ itNumber: normalizedITNumber });
     if (!user) {
       return res.status(404).json({ message: 'User with that IT number not found' });
     }
@@ -147,7 +164,7 @@ export const addMemberToGroup = async (req, res) => {
       joinedAt: new Date()
     });
 
-    group.memberITNumbers.push(itNumber);
+    group.memberITNumbers.push(user.itNumber);
     await group.save();
 
     // Add group to user's groups

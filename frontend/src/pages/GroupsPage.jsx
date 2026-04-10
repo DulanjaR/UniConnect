@@ -66,6 +66,10 @@ export default function GroupsPage() {
     setSelectedGroup(null);
   };
 
+  const openGroupChat = (groupId) => {
+    navigate(`/groups/${groupId}/chat`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -113,7 +117,19 @@ export default function GroupsPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
             {groups.map(group => (
-              <div key={group._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+              <div
+                key={group._id}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow"
+                role="button"
+                tabIndex={0}
+                onClick={() => openGroupChat(group._id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openGroupChat(group._id);
+                  }
+                }}
+              >
                 {/* Group Header */}
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex items-start justify-between mb-3">
@@ -157,14 +173,20 @@ export default function GroupsPage() {
                 {/* Actions */}
                 <div className="p-6 border-t border-gray-200 flex gap-3">
                   <button
-                    onClick={() => setSelectedGroup(group)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedGroup(group);
+                    }}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 font-medium text-sm"
                   >
                     <UserPlus className="w-4 h-4" />
                     Add Member
                   </button>
                   <button
-                    onClick={() => handleDeleteGroup(group._id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDeleteGroup(group._id);
+                    }}
                     className="flex items-center justify-center gap-2 px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 font-medium text-sm"
                   >
                     <Trash2 className="w-4 h-4" />

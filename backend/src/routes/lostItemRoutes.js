@@ -7,7 +7,8 @@ import {
   deleteLostItem,
   markAsResolved,
   addComment,
-  flagItem
+  flagItem,
+  getItemMatches
 } from '../controllers/lostItemController.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -18,6 +19,7 @@ const router = express.Router();
 // Public routes
 router.get('/', getLostItems);
 router.get('/my-items', authMiddleware, getMyItems);
+router.get('/:id/matches', getItemMatches);
 router.get('/:id', getLostItem);
 
 // Protected routes

@@ -16,6 +16,10 @@ import Profile from './pages/Profile';
 import MyItems from "./pages/MyItems";
 import EditItem from "./pages/EditItem";
 import GroupsPage from './pages/GroupsPage';
+import GroupChatPage from './pages/GroupChatPage';
+import AdminClaims from "./pages/AdminClaims";
+import ResolvedItems from "./pages/ResolvedItems";
+import ResolvedItemDetails from "./pages/ResolvedItemDetails";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -59,6 +63,9 @@ function AppContent() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/post/:postId" element={<PostDetail />} />
+        <Route path="/admin-claims" element={<AdminClaims />} />
+        <Route path="/resolved-items" element={<ResolvedItems />} />
+        <Route path="/resolved-item/:id" element={<ResolvedItemDetails />} />
 
         {/* Protected routes */}
         <Route
@@ -74,6 +81,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <GroupsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId/chat"
+          element={
+            <ProtectedRoute>
+              <GroupChatPage />
             </ProtectedRoute>
           }
         />

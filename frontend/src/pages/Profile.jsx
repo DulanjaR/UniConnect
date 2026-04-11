@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Eye, MoreVertical, Share2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { postsAPI, authAPI } from '../services/api';
+import { postsAPI, authAPI, complaintsAPI } from '../services/api';
+import ComplaintForm from '../components/ComplaintForm';
 import axios from 'axios';
 
 export default function Profile() {
@@ -12,6 +13,7 @@ export default function Profile() {
   
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -19,6 +21,7 @@ export default function Profile() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [complaintFormOpen, setComplaintFormOpen] = useState(false);
   const [editingPostData, setEditingPostData] = useState({
     title: '',
     body: '',
@@ -40,6 +43,9 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProfile();
+    if (isOwnProfile) {
+      fetchComplaints();
+    }
   }, [userId, currentUser?.id]);
 
   const fetchProfile = async () => {
@@ -173,11 +179,23 @@ export default function Profile() {
       console.log('Upload response:', response.data);
       
       if (response.data.imageUrl) {
-        setEditData(prev => ({
+        const newProfileData = {
+          ...editData,
+          profilePicture: response.data.imageUrl
+        };
+        
+        // Automatically save to backend immediately
+        console.log('Saving profile picture to backend...');
+        await authAPI.updateProfile(newProfileData);
+        
+        // Update both states
+        setEditData(newProfileData);
+        setProfile(prev => ({
           ...prev,
           profilePicture: response.data.imageUrl
         }));
-        console.log('Profile picture updated');
+        
+        console.log('✅ Profile picture saved successfully');
       } else {
         setError('No image URL returned from server');
       }
@@ -203,6 +221,27 @@ export default function Profile() {
     } catch (err) {
       setError('Failed to update profile');
       console.error(err);
+    }
+  };
+
+  const fetchComplaints = async () => {
+    try {
+      const response = await complaintsAPI.getMyComplaints();
+      setComplaints(response.data.data || []);
+    } catch (err) {
+      console.error('Error fetching complaints:', err);
+    }
+  };
+
+  const handleDeleteComplaint = async (complaintId) => {
+    if (!window.confirm('Are you sure you want to delete this complaint?')) return;
+
+    try {
+      await complaintsAPI.delete(complaintId);
+      setComplaints(complaints.filter(c => c._id !== complaintId));
+    } catch (err) {
+      console.error('Error deleting complaint:', err);
+      setError('Failed to delete complaint: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -441,6 +480,85 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* Complaints Section - Only show for own profile */}
+        {isOwnProfile && (
+          <div className="mt-12">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-accent-orange/30">
+              <h2 className="section-title-accent">Complaints & Appeals</h2>
+              <button
+                onClick={() => setComplaintFormOpen(true)}
+                className="btn-primary"
+              >
+                ⚠️ Submit Complaint/Appeal
+              </button>
+            </div>
+
+            {complaints.length === 0 ? (
+              <div className="card text-center py-12">
+                <p className="text-gray-500">
+                  No complaints or appeals yet. If you have any issues, submit one through the form above.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {complaints.map(complaint => (
+                  <div key={complaint._id} className="card border-l-4 border-l-accent-orange">
+                    <div className="flex justify-between items-start gap-4 mb-3">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-bold text-lg">{complaint.title}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            complaint.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            complaint.status === 'under-review' ? 'bg-blue-100 text-blue-800' :
+                            complaint.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {complaint.status.toUpperCase()}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            complaint.type === 'complaint' ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {complaint.type.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Category: <span className="font-medium">{complaint.category.replace('-', ' ').toUpperCase()}</span>
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Submitted {new Date(complaint.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {complaint.status === 'pending' && (
+                        <button
+                          onClick={() => handleDeleteComplaint(complaint._id)}
+                          className="text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition"
+                        >
+                          🗑️ Delete
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-gray-700 mb-3">{complaint.description}</p>
+
+                    {complaint.adminNotes && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                        <p className="text-sm font-semibold text-blue-900 mb-1">Admin Notes:</p>
+                        <p className="text-sm text-blue-800">{complaint.adminNotes}</p>
+                      </div>
+                    )}
+
+                    {complaint.resolvedAt && (
+                      <p className="text-xs text-gray-500 mt-3">
+                        Resolved on {new Date(complaint.resolvedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Posts Section */}
         <div className="mt-12">
           <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-accent-orange/30">
@@ -644,6 +762,13 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Complaint Form Modal */}
+      <ComplaintForm
+        isOpen={complaintFormOpen}
+        onClose={() => setComplaintFormOpen(false)}
+        onSuccess={fetchComplaints}
+      />
     </div>
   );
 }

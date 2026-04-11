@@ -96,3 +96,14 @@ export const adminAPI = {
   suspendUser: (userId, data) => axios.post(`${API_URL}/admin/users/${userId}/suspend`, data),
   restoreUser: (userId) => axios.post(`${API_URL}/admin/users/${userId}/restore`),
 };
+
+// Complaints API
+export const complaintsAPI = {
+  create: (data) => axiosInstance.post('/complaints', data),
+  getMyComplaints: (params) => axiosInstance.get('/complaints/user/my-complaints', { params }),
+  getById: (id) => axiosInstance.get(`/complaints/${id}`),
+  delete: (id) => axiosInstance.delete(`/complaints/${id}`),
+  // Admin endpoints
+  getAll: (params) => axiosInstance.get('/complaints', { params }),
+  updateStatus: (id, data) => axiosInstance.put(`/complaints/${id}/status`, data),
+};

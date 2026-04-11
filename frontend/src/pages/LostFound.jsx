@@ -132,13 +132,6 @@ function LostFound() {
         >
           Clear
         </button>
-
-        <button
-          onClick={() => navigate("/admin-claims")}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg shadow"
-        >
-          Admin Review
-        </button>
       </div>
 
       {/* Items */}

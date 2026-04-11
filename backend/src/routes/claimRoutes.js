@@ -1,6 +1,6 @@
 import express from "express";
 import Claim from "../models/Claim.js";
-import { authMiddleware } from "../middleware/auth.js";
+import { authMiddleware, adminMiddleware } from "../middleware/auth.js";
 import upload from "../middleware/upload.js";
 
 const router = express.Router();
@@ -60,23 +60,70 @@ router.get("/item/:itemId", async (req, res) => {
   }
 });
 
-// GET ALL CLAIMS
-router.get("/", authMiddleware, async (req, res) => {
+// GET ALL CLAIMS (admin only)
+router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const claims = await Claim.find()
+    const { page = 1, limit = 10, status } = req.query;
+    const skip = (page - 1) * limit;
+    
+    const filter = {};
+    if (status) {
+      filter.status = status;
+    }
+
+    const claims = await Claim.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
       .populate("itemId", "title itemType category location images status")
       .populate("userId", "name email");
 
-    res.json(claims);
+    const total = await Claim.countDocuments(filter);
+
+    res.json({
+      claims,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: parseInt(page)
+      }
+    });
   } catch (err) {
     console.error("Get all claims error:", err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// APPROVE CLAIM
-router.put("/:id/approve", authMiddleware, async (req, res) => {
+// UPDATE CLAIM STATUS (admin only) - Generic endpoint for approve/reject
+router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    const claim = await Claim.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    )
+      .populate("itemId", "title itemType category location images status")
+      .populate("userId", "name email");
+
+    if (!claim) {
+      return res.status(404).json({ message: 'Claim not found' });
+    }
+
+    res.json(claim);
+  } catch (err) {
+    console.error("Update claim error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// APPROVE CLAIM (kept for backwards compatibility)
+router.put("/:id/approve", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const claim = await Claim.findByIdAndUpdate(
       req.params.id,
@@ -93,8 +140,8 @@ router.put("/:id/approve", authMiddleware, async (req, res) => {
   }
 });
 
-// REJECT CLAIM
-router.put("/:id/reject", authMiddleware, async (req, res) => {
+// REJECT CLAIM (kept for backwards compatibility)
+router.put("/:id/reject", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const claim = await Claim.findByIdAndUpdate(
       req.params.id,

@@ -19,7 +19,12 @@ export default function Login() {
     const result = await login(email, password);
 
     if (result.success) {
-      navigate('/profile');
+      // Redirect admin users to admin dashboard
+      if (result.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/profile');
+      }
     } else {
       setError(result.error);
     }

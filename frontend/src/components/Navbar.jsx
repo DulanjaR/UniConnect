@@ -22,17 +22,23 @@ export default function Navbar() {
         <div className="flex gap-6 items-center">
           {user ? (
             <>
-              <Link to="/" className="hover:text-accent-orange transition">
-                Home
-              </Link>
-              <Link to="/groups" className="hover:text-accent-orange transition">
-                Groups
-              </Link>
-              <Link to="/lost-found" className="hover:text-accent-orange transition">
-                Lost & Found
-              </Link>
+              {user.role !== 'admin' && (
+                <Link to="/" className="hover:text-accent-orange transition">
+                  Home
+                </Link>
+              )}
+              {user.role !== 'admin' && (
+                <Link to="/groups" className="hover:text-accent-orange transition">
+                  Groups
+                </Link>
+              )}
+              {user.role !== 'admin' && (
+                <Link to="/lost-found" className="hover:text-accent-orange transition">
+                  Lost & Found
+                </Link>
+              )}
               {user.role === 'admin' && (
-                <Link to="/admin" className="hover:text-accent-orange transition font-semibold">
+                <Link to="/admin/dashboard" className="hover:text-accent-orange transition font-semibold">
                   Admin Dashboard
                 </Link>
               )}

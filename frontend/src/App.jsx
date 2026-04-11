@@ -18,6 +18,7 @@ import EditItem from "./pages/EditItem";
 import GroupsPage from './pages/GroupsPage';
 import GroupChatPage from './pages/GroupChatPage';
 import AdminClaims from "./pages/AdminClaims";
+import AdminDashboard from "./pages/AdminDashboard";
 import ResolvedItems from "./pages/ResolvedItems";
 import ResolvedItemDetails from "./pages/ResolvedItemDetails";
 
@@ -92,6 +93,17 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        
         <Route
           path="/add-item"
           element={

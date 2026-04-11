@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 function ItemDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ function ItemDetails() {
 
   const fetchItem = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/lost-items/${id}`);
+      const res = await axios.get(`${API_URL}/lost-items/${id}`);
       setItem(res.data);
     } catch (err) {
       console.error(err);
@@ -38,7 +40,7 @@ function ItemDetails() {
 
   const fetchClaim = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/claims/item/${id}`);
+      const res = await axios.get(`${API_URL}/claims/item/${id}`);
       setClaim(res.data);
 
       if (res.data?.status === "rejected") {
@@ -57,7 +59,7 @@ function ItemDetails() {
   const fetchMatches = async () => {
     try {
       setLoadingMatches(true);
-      const res = await axios.get(`http://localhost:5000/api/lost-items/${id}/matches`);
+      const res = await axios.get(`${API_URL}/lost-items/${id}/matches`);
       setMatches(res.data.matches || []);
     } catch (err) {
       console.error("Error fetching matches:", err);
@@ -105,7 +107,7 @@ function ItemDetails() {
       formData.append("email", claimForm.email);
       formData.append("idCardImage", claimForm.idCardImage);
 
-      await axios.post("http://localhost:5000/api/claims", formData, {
+      await axios.post(`${API_URL}/claims`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -134,7 +136,7 @@ function ItemDetails() {
       const token = localStorage.getItem("token");
 
       await axios.post(
-        `http://localhost:5000/api/lost-items/${id}/resolve`,
+        `${API_URL}/lost-items/${id}/resolve`,
         {},
         {
           headers: {

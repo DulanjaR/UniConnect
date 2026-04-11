@@ -182,15 +182,24 @@ const calculateMatchScore = (currentItem, candidateItem) => {
 export const findMatches = (currentItem, candidateItems = []) => {
   const oppositeType = currentItem.itemType === "lost" ? "found" : "lost";
 
-  const matches = candidateItems
-    .filter(
-      (item) =>
-        item._id.toString() !== currentItem._id.toString() &&
-        item.itemType === oppositeType &&
-        item.status === "active"
-    )
+  console.log(`🔍 Finding matches for: ${currentItem.title} (${currentItem.itemType})`);
+  console.log(`📊 Looking for opposite type: ${oppositeType}`);
+  console.log(`📋 Total candidate items: ${candidateItems.length}`);
+
+  // Filter for opposite type and active status
+  const oppositeTypeItems = candidateItems.filter(
+    (item) =>
+      item._id.toString() !== currentItem._id.toString() &&
+      item.itemType === oppositeType &&
+      item.status === "active"
+  );
+
+  console.log(`✅ Found ${oppositeTypeItems.length} items with opposite type and active status`);
+
+  const matches = oppositeTypeItems
     .map((item) => {
       const result = calculateMatchScore(currentItem, item);
+      console.log(`  - "${item.title}" scored ${result.score} (${result.label})`);
       return {
         ...item.toObject(),
         matchScore: result.score,
@@ -200,6 +209,8 @@ export const findMatches = (currentItem, candidateItems = []) => {
     })
     .filter((item) => item.matchScore >= 30)
     .sort((a, b) => b.matchScore - a.matchScore);
+
+  console.log(`🎯 Final matches after threshold filter: ${matches.length}`);
 
   return matches;
 };

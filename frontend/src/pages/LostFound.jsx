@@ -19,9 +19,12 @@ function LostFound() {
   const fetchItems = async () => {
     try {
       const res = await getItems();
-      setItems(res.data.items);
+      // Handle both response structures
+      const itemsData = Array.isArray(res.data) ? res.data : res.data.items;
+      setItems(itemsData || []);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching items:", err);
+      setItems([]);
     }
   };
 
@@ -43,7 +46,7 @@ function LostFound() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Lost & Found</h2>
+      <h2 className="text-2xl font-bold mb-6 text-[#1f2f8a]">Lost & Found</h2>
 
       {/* Top Actions */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
@@ -72,17 +75,17 @@ function LostFound() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6 flex-wrap">
+      <div className="flex gap-4 mb-8 flex-wrap">
         <input
           type="text"
           placeholder="Search items..."
-          className="border p-2 rounded w-full md:w-1/3"
+          className="border p-3 rounded-lg w-full md:w-1/3"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -96,7 +99,7 @@ function LostFound() {
         </select>
 
         <select
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg"
           value={type}
           onChange={(e) => setType(e.target.value)}
         >
@@ -109,7 +112,7 @@ function LostFound() {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg"
         />
 
         <input
@@ -117,7 +120,7 @@ function LostFound() {
           placeholder="Filter by location"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-3 rounded-lg"
         />
 
         <button
@@ -128,61 +131,85 @@ function LostFound() {
             setDate("");
             setLocation("");
           }}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded"
+          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg"
         >
           Clear
         </button>
       </div>
 
       {/* Items */}
-      <div className="space-y-6">
-        {filteredItems.length === 0 && (
-          <p className="text-gray-500">No items found</p>
-        )}
+      {filteredItems.length === 0 ? (
+        <p className="text-gray-500">No items found</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
+          {filteredItems.map((item) => (
+            <div
+              key={item._id}
+              onClick={() => navigate(`/item/${item._id}`)}
+              className="bg-white border-[3px] border-gray-200 rounded-[32px] p-4 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 cursor-pointer flex flex-col h-full"
+            >
+              {/* Image */}
+              <div className="w-full h-56 rounded-[24px] bg-gray-100 flex items-center justify-center mb-4 border border-gray-200 p-3">
+                {item.images && item.images.length > 0 ? (
+                  <img
+                    src={item.images[0]}
+                    alt={item.title}
+                    className="max-w-full max-h-full object-contain mx-auto"
+                  />
+                ) : (
+                  <div className="text-gray-400 text-sm">No Image</div>
+                )}
+              </div>
 
-        {filteredItems.map((item) => (
-          <div
-            key={item._id}
-            onClick={() => navigate(`/item/${item._id}`)}
-            className="flex justify-between items-center bg-white p-5 rounded-xl shadow hover:shadow-lg transition cursor-pointer"
-          >
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">{item.title}</h3>
+              {/* Content */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 capitalize line-clamp-1">
+                    {item.title}
+                  </h3>
 
-              <p className="text-gray-600 mt-1">{item.description}</p>
+                  <span
+                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold text-white ${
+                      item.itemType === "lost" ? "bg-red-500" : "bg-green-500"
+                    }`}
+                  >
+                    {item.itemType === "lost" ? "Lost" : "Found"}
+                  </span>
+                </div>
 
-              <div className="flex gap-4 mt-3 text-sm text-gray-500 flex-wrap">
-                <span>📍 {item.location}</span>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[40px]">
+                  {item.description}
+                </p>
 
-                <span>
-                  📅{" "}
-                  {item.dateOfIncident
-                    ? new Date(item.dateOfIncident).toLocaleDateString()
-                    : "N/A"}
-                </span>
+                <div className="space-y-2 text-sm text-gray-600 mb-4">
+                  <p className="line-clamp-1">
+                    📍 <span className="font-medium">Location:</span>{" "}
+                    {item.location || "N/A"}
+                  </p>
 
-                <span
-                  className={`px-2 py-1 rounded text-white text-xs ${
-                    item.itemType === "lost" ? "bg-red-500" : "bg-green-500"
-                  }`}
-                >
-                  {item.itemType === "lost" ? "Lost" : "Found"}
-                </span>
+                  <p>
+                    📅 <span className="font-medium">Date:</span>{" "}
+                    {item.dateOfIncident
+                      ? new Date(item.dateOfIncident).toLocaleDateString()
+                      : "N/A"}
+                  </p>
 
-                <span className="capitalize">📂 {item.category}</span>
+                  <p className="capitalize line-clamp-1">
+                    📂 <span className="font-medium">Category:</span>{" "}
+                    {item.category}
+                  </p>
+                </div>
+
+                <div className="mt-auto pt-3 border-t border-gray-100">
+                  <span className="text-sm font-medium text-blue-600">
+                    View item details →
+                  </span>
+                </div>
               </div>
             </div>
-
-            {item.images && item.images.length > 0 && (
-              <img
-                src={item.images[0]}
-                alt="item"
-                className="w-32 h-32 object-cover rounded-lg ml-6 border"
-              />
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

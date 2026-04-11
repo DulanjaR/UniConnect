@@ -59,10 +59,33 @@ function ItemDetails() {
   const fetchMatches = async () => {
     try {
       setLoadingMatches(true);
+      console.log(`🔎 Starting fetch matches for item ID: ${id}`);
+      console.log(`📡 API URL: ${API_URL}/lost-items/${id}/matches`);
+      
       const res = await axios.get(`${API_URL}/lost-items/${id}/matches`);
-      setMatches(res.data.matches || []);
+      
+      console.log("✅ API Response received:");
+      console.log("   Status:", res.status);
+      console.log("   Data:", res.data);
+      console.log("   Data type:", typeof res.data);
+      console.log("   Matches property exists:", "matches" in res.data);
+      console.log("   Matches value:", res.data.matches);
+      console.log("   Matches is array:", Array.isArray(res.data.matches));
+      console.log("   Matches length:", res.data.matches?.length);
+      
+      if (Array.isArray(res.data.matches)) {
+        console.log("✅ Matches is valid array, setting state with", res.data.matches.length, "items");
+        setMatches(res.data.matches);
+      } else {
+        console.warn("⚠️ Matches is not an array:", res.data.matches);
+        setMatches([]);
+      }
     } catch (err) {
-      console.error("Error fetching matches:", err);
+      console.error("❌ Error fetching matches:");
+      console.error("   Message:", err.message);
+      console.error("   Status:", err.response?.status);
+      console.error("   Response data:", err.response?.data);
+      console.error("   Full error:", err);
       setMatches([]);
     } finally {
       setLoadingMatches(false);
@@ -451,93 +474,105 @@ function ItemDetails() {
         <div className="bg-white rounded-[28px] shadow-sm border border-slate-200 p-6">
           <h3 className="text-2xl font-bold text-slate-800 mb-5">🔍 Possible Matches</h3>
 
-          {loadingMatches ? (
-            <p className="text-slate-500">Loading matches...</p>
-          ) : matches.length === 0 ? (
-            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500">
-              No possible matches found for this item.
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-5">
-              {matches.map((match) => (
-                <Link
-                  key={match._id}
-                  to={`/item/${match._id}`}
-                  className="block bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition duration-200 cursor-pointer"
-                >
-                  <div className="flex flex-wrap gap-4 mb-3">
-                    {match.images && match.images.length > 0 ? (
-                      <img
-                        src={match.images[0]}
-                        alt={match.title}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setPreviewImage(match.images[0]);
-                        }}
-                        className="w-28 h-28 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-105 transition"
-                      />
-                    ) : (
-                      <div className="w-28 h-28 bg-gray-200 rounded-xl flex items-center justify-center text-sm text-gray-500">
-                        No Image
+          {(() => {
+            console.log("🎨 Rendering matches - loading:", loadingMatches, "count:", matches?.length);
+            
+            if (loadingMatches) {
+              return <p className="text-slate-500">Loading matches...</p>;
+            }
+            
+            if (!matches || matches.length === 0) {
+              console.log("📭 No matches to display");
+              return (
+                <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500">
+                  No possible matches found for this item.
+                </div>
+              );
+            }
+            
+            console.log("📦 Rendering", matches.length, "matches");
+            return (
+              <div className="grid md:grid-cols-2 gap-5">
+                {matches.map((match) => (
+                  <Link
+                    key={match._id}
+                    to={`/item/${match._id}`}
+                    className="block bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition duration-200 cursor-pointer"
+                  >
+                    <div className="flex flex-wrap gap-4 mb-3">
+                      {match.images && match.images.length > 0 ? (
+                        <img
+                          src={match.images[0]}
+                          alt={match.title}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPreviewImage(match.images[0]);
+                          }}
+                          className="w-28 h-28 object-cover rounded-xl border border-slate-200 cursor-pointer hover:scale-105 transition"
+                        />
+                      ) : (
+                        <div className="w-28 h-28 bg-gray-200 rounded-xl flex items-center justify-center text-sm text-gray-500">
+                          No Image
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h4 className="text-lg font-bold text-slate-800 break-words">
+                            {match.title}
+                          </h4>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getMatchBadgeStyle(
+                              match.matchLabel
+                            )}`}
+                          >
+                            {match.matchLabel}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 text-sm text-slate-600">
+                          <p className="break-words">📍 {match.location || "N/A"}</p>
+                          <p className="break-words">📂 {match.category}</p>
+                          <p>
+                            📅{" "}
+                            {match.dateOfIncident
+                              ? new Date(match.dateOfIncident).toLocaleDateString()
+                              : "N/A"}
+                          </p>
+                        </div>
+
+                        <p className="text-sm font-semibold text-blue-700 mt-2">
+                          Match Score: {match.matchScore}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-700 mb-3 break-words break-all">
+                      {match.description}
+                    </p>
+
+                    {match.matchReasons?.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {match.matchReasons.map((reason, index) => (
+                          <span
+                            key={index}
+                            className="bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded-full text-xs"
+                          >
+                            {reason}
+                          </span>
+                        ))}
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h4 className="text-lg font-bold text-slate-800 break-words">
-                          {match.title}
-                        </h4>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getMatchBadgeStyle(
-                            match.matchLabel
-                          )}`}
-                        >
-                          {match.matchLabel}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-sm text-slate-600">
-                        <p className="break-words">📍 {match.location || "N/A"}</p>
-                        <p className="break-words">📂 {match.category}</p>
-                        <p>
-                          📅{" "}
-                          {match.dateOfIncident
-                            ? new Date(match.dateOfIncident).toLocaleDateString()
-                            : "N/A"}
-                        </p>
-                      </div>
-
-                      <p className="text-sm font-semibold text-blue-700 mt-2">
-                        Match Score: {match.matchScore}%
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-slate-700 mb-3 break-words break-all">
-                    {match.description}
-                  </p>
-
-                  {match.matchReasons?.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {match.matchReasons.map((reason, index) => (
-                        <span
-                          key={index}
-                          className="bg-blue-100 text-blue-700 border border-blue-200 px-2 py-1 rounded-full text-xs"
-                        >
-                          {reason}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <p className="mt-4 text-sm font-medium text-blue-600">
-                    Click to view details →
-                  </p>
-                </Link>
-              ))}
-            </div>
-          )}
+                    <p className="mt-4 text-sm font-medium text-blue-600">
+                      Click to view details →
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Preview Modal */}

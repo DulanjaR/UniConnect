@@ -64,13 +64,6 @@ function LostFound() {
           >
             My Activity
           </button>
-
-          <button
-            onClick={() => navigate("/resolved-items")}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg shadow"
-          >
-            Resolved
-          </button>
         </div>
       </div>
 

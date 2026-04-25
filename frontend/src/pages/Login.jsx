@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,11 +6,30 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [currentTime, setCurrentTime] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const formatClock = () => {
+      return new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+    };
+
+    setCurrentTime(formatClock());
+    const timer = setInterval(() => {
+      setCurrentTime(formatClock());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +68,11 @@ export default function Login() {
           {/* Right Side - Form */}
           <div className="flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md">
+              <div className="mb-8 rounded-[36px] border border-slate-200/70 bg-white/80 px-6 py-5 shadow-2xl shadow-slate-900/10 backdrop-blur-xl text-center">
+                <p className="text-5xl font-semibold tracking-tight text-slate-900">{currentTime}</p>
+                <p className="mt-1 text-sm text-slate-500">Live local time</p>
+              </div>
+
               <h1 className="section-title-accent text-center mb-2">Welcome to UniConnect</h1>
               <p className="text-center text-gray-600 mb-8">Sign in to your account</p>
 

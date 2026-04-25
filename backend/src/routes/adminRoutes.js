@@ -5,6 +5,7 @@ import {
   getAllComments,
   getAllLostItems,
   getAllUsers,
+  getAllGroups,
   getAdminLogs,
   suspendUser,
   restoreUser,
@@ -25,6 +26,7 @@ router.get('/activity-report', getDetailedActivityReport);
 router.get('/posts', getAllPosts);
 router.get('/comments', getAllComments);
 router.get('/lost-items', getAllLostItems);
+router.get('/groups', getAllGroups);
 
 // User Management
 router.get('/users', getAllUsers);

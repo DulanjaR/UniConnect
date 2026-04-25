@@ -20,7 +20,12 @@ export default function Login() {
     const result = await login(email, password);
 
     if (result.success) {
-      navigate('/');
+      // Redirect admin users to admin dashboard
+      if (result.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/profile');
+      }
     } else {
       setError(result.error);
     }
@@ -29,7 +34,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-light-beige to-accent-beige">
+    <div className="min-h-screen bg-gradient-vibrant">
       <div className="h-full">
         <div className="grid grid-cols-1 md:grid-cols-2 h-screen">
           {/* Left Side - Image */}
@@ -44,7 +49,7 @@ export default function Login() {
           {/* Right Side - Form */}
           <div className="flex items-center justify-center px-4 py-8">
             <div className="w-full max-w-md">
-              <h1 className="section-title text-center mb-2">Welcome to UniConnect</h1>
+              <h1 className="section-title-accent text-center mb-2">Welcome to UniConnect</h1>
               <p className="text-center text-gray-600 mb-8">Sign in to your account</p>
 
               {error && (
@@ -96,7 +101,7 @@ export default function Login() {
 
               <p className="text-center mt-6 text-sm">
                 Don't have an account?{' '}
-                <Link to="/register" className="text-primary-teal font-semibold hover:underline">
+                <Link to="/register" className="text-accent-orange font-semibold hover:underline">
                   Register here
                 </Link>
               </p>

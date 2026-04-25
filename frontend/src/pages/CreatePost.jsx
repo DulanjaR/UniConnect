@@ -38,7 +38,7 @@ export default function CreatePost() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-light-beige flex items-center justify-center">
+      <div className="min-h-screen bg-hero-gradient flex items-center justify-center relative">
         <div className="card text-center">
           <p className="mb-4">Please log in to create a post</p>
           <button onClick={() => navigate('/login')} className="btn-primary">
@@ -187,7 +187,7 @@ export default function CreatePost() {
   };
 
   return (
-    <div className="min-h-screen bg-light-beige py-8">
+    <div className="min-h-screen bg-vibrant-gradient py-8 relative">
       <div className="max-w-2xl mx-auto px-4">
         <h1 className="section-title">Create a New Post</h1>
         <p className="text-gray-600 mb-8">Share knowledge with your peers and the community.</p>

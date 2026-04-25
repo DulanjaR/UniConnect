@@ -16,6 +16,11 @@ import Profile from './pages/Profile';
 import MyItems from "./pages/MyItems";
 import EditItem from "./pages/EditItem";
 import GroupsPage from './pages/GroupsPage';
+import GroupChatPage from './pages/GroupChatPage';
+import AdminClaims from "./pages/AdminClaims";
+import AdminDashboard from "./pages/AdminDashboard";
+import ResolvedItems from "./pages/ResolvedItems";
+import ResolvedItemDetails from "./pages/ResolvedItemDetails";
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -59,6 +64,9 @@ function AppContent() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/post/:postId" element={<PostDetail />} />
+        <Route path="/admin-claims" element={<AdminClaims />} />
+        <Route path="/resolved-items" element={<ResolvedItems />} />
+        <Route path="/resolved-item/:id" element={<ResolvedItemDetails />} />
 
         {/* Protected routes */}
         <Route
@@ -77,6 +85,25 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/groups/:groupId/chat"
+          element={
+            <ProtectedRoute>
+              <GroupChatPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        
         <Route
           path="/add-item"
           element={
@@ -113,7 +140,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-light-beige">
+      <div className="min-h-screen bg-modern-bg">
         <AppContent />
       </div>
     </AuthProvider>

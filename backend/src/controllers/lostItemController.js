@@ -295,3 +295,42 @@ export const getMyItems = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+import { findMatches } from '../utils/matchItems.js';
+
+export const getItemMatches = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`\n🔎 Match request for item ID: ${id}`);
+
+    const currentItem = await LostItem.findById(id);
+
+    if (!currentItem) {
+      console.log(`❌ Item not found with ID: ${id}`);
+      return res.status(404).json({ message: 'Item not found' });
+    }
+
+    console.log(`✅ Found item: "${currentItem.title}" (Type: ${currentItem.itemType}, Status: ${currentItem.status})`);
+
+    const allItems = await LostItem.find({
+      status: 'active'
+    });
+
+    console.log(`📦 Total active items in database: ${allItems.length}`);
+
+    const matches = findMatches(currentItem, allItems);
+
+    console.log(`✨ Returning ${matches.length} matches to frontend\n`);
+
+    res.status(200).json({
+      itemId: currentItem._id,
+      itemType: currentItem.itemType,
+      totalMatches: matches.length,
+      matches: matches.slice(0, 5)
+    });
+  } catch (error) {
+    console.error('Error fetching item matches:', error);
+    res.status(500).json({ message: 'Server error while fetching matches' });
+  }
+};

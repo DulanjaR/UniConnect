@@ -35,7 +35,8 @@ export default function Profile() {
     profilePicture: ''
   });
 
-  const isOwnProfile = !userId || userId === currentUser?.id;
+  // Match token payload field name (id from response, but backend uses userId in token)
+  const isOwnProfile = !userId || userId === currentUser?.id || userId === currentUser?._id;
 
   useEffect(() => {
     fetchProfile();
@@ -207,7 +208,7 @@ export default function Profile() {
 
   if (isOwnProfile && !currentUser) {
     return (
-      <div className="min-h-screen bg-light-beige flex items-center justify-center">
+      <div className="min-h-screen bg-modern-bg flex items-center justify-center">
         <div className="card text-center">
           <p className="text-gray-500 mb-4">Please log in to view your profile</p>
           <button onClick={() => navigate('/login')} className="btn-primary">
@@ -220,7 +221,7 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-light-beige flex items-center justify-center">
+      <div className="min-h-screen bg-modern-bg flex items-center justify-center">
         <p className="text-gray-500">Loading profile...</p>
       </div>
     );
@@ -228,7 +229,7 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-light-beige flex items-center justify-center">
+      <div className="min-h-screen bg-modern-bg flex items-center justify-center">
         <div className="card text-center">
           <p className="text-gray-500 mb-4">Profile not found</p>
           <button onClick={() => navigate('/')} className="btn-primary">
@@ -240,7 +241,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-light-beige py-8">
+    <div className="min-h-screen bg-profile-gradient py-8 relative">
       {/* Image Modal */}
       {selectedImage && (
         <div 
@@ -271,7 +272,7 @@ export default function Profile() {
         )}
 
         {/* Profile Header Card */}
-        <div className="card mb-8">
+        <div className="card mb-8 border-t-4 border-t-accent-orange shadow-xl shadow-blue-400/15 bg-white/90 backdrop-blur-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Profile Picture */}
             <div className="flex flex-col items-center">
@@ -279,10 +280,10 @@ export default function Profile() {
                 <img
                   src={editData.profilePicture || 'https://via.placeholder.com/150?text=Profile'}
                   alt={profile.name}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-primary-teal"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-primary-blue"
                 />
                 {isOwnProfile && isEditing && (
-                  <label className="absolute bottom-0 right-0 bg-primary-teal text-white rounded-full p-2 cursor-pointer hover:bg-secondary-teal">
+                  <label className="absolute bottom-0 right-0 bg-primary-blue text-white rounded-full p-2 cursor-pointer hover:bg-primary-blue-light">
                     <input
                       type="file"
                       accept="image/*"
@@ -400,7 +401,7 @@ export default function Profile() {
                 </div>
               ) : (
                 <div>
-                  <h1 className="text-3xl font-bold text-primary-teal mb-2">{profile.name}</h1>
+                  <h1 className="text-3xl font-bold text-primary-blue mb-2">{profile.name}</h1>
                   <p className="text-gray-600 mb-4">{profile.email}</p>
                   {profile.bio && (
                     <p className="text-gray-700 mb-4 italic">{profile.bio}</p>
@@ -441,9 +442,9 @@ export default function Profile() {
         </div>
 
         {/* Posts Section */}
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="section-title">
+        <div className="mt-12">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-accent-orange/30">
+            <h2 className="section-title-accent">
               {isOwnProfile ? 'Your Posts' : `${profile.name}'s Posts`}
             </h2>
             {isOwnProfile && (
@@ -524,7 +525,7 @@ export default function Profile() {
                     >
                       <div className="flex justify-between items-start mb-3 relative">
                         <div>
-                          <h3 className="text-xl font-bold text-primary-teal">
+                          <h3 className="text-xl font-bold text-primary-blue">
                             {post.title}
                           </h3>
                           <p className="text-sm text-gray-500">

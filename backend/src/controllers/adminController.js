@@ -3,6 +3,7 @@ import { Comment } from '../models/Comment.js';
 import { LostItem } from '../models/LostItem.js';
 import { AdminLog } from '../models/AdminLog.js';
 import { User } from '../models/User.js';
+import { Group } from '../models/Group.js';
 
 export const getDashboardStats = async (req, res) => {
   try {
@@ -10,6 +11,7 @@ export const getDashboardStats = async (req, res) => {
     const totalPosts = await Post.countDocuments({ status: 'active' });
     const totalComments = await Comment.countDocuments({ status: 'active' });
     const totalLostItems = await LostItem.countDocuments({ status: 'active' });
+    const totalGroups = await Group.countDocuments({ status: 'active' });
 
     const lostItems = await LostItem.countDocuments({ status: 'active', itemType: 'lost' });
     const foundItems = await LostItem.countDocuments({ status: 'active', itemType: 'found' });
@@ -26,6 +28,7 @@ export const getDashboardStats = async (req, res) => {
       users: totalUsers,
       posts: totalPosts,
       comments: totalComments,
+      groups: totalGroups,
       lostItems: {
         total: totalLostItems,
         lost: lostItems,
@@ -315,6 +318,46 @@ export const getDetailedActivityReport = async (req, res) => {
       activityByAction,
       activityByAdmin,
       totalLogs: await AdminLog.countDocuments(filter)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getAllGroups = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, search, sort = '-createdAt' } = req.query;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const groups = await Group.find(filter)
+      .populate('creator', 'name email')
+      .populate('members.userId', 'name email')
+      .sort(sort)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Group.countDocuments(filter);
+
+    res.json({
+      groups,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: parseInt(page)
+      }
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

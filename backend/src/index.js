@@ -11,6 +11,7 @@ import userRoutes from './routes/userRoutes.js';
 import { groupRoutes } from './routes/groupRoutes.js';
 import { postShareRoutes } from './routes/postShareRoutes.js';
 import claimRoutes from "./routes/claimRoutes.js";
+import complaintRoutes from './routes/complaintRoutes.js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -34,6 +35,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/shares', postShareRoutes);
 app.use("/api/claims", claimRoutes);
+app.use('/api/complaints', complaintRoutes);
 
 connectDB(mongoUri).then(() => {
   app.listen(port, () => {

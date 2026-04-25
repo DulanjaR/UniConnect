@@ -14,6 +14,7 @@ export default function AdminDashboard() {
   
   // Active tab state
   const [activeTab, setActiveTab] = useState('stats');
+  const [resolvedClaimsMap, setResolvedClaimsMap] = useState({});
   
   // Stats
   const [stats, setStats] = useState(null);
@@ -52,6 +53,7 @@ export default function AdminDashboard() {
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedClaim, setSelectedClaim] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   
   // Form states
   const [userFormData, setUserFormData] = useState({});
@@ -132,6 +134,45 @@ export default function AdminDashboard() {
       setItemsLoading(false);
     }
   };
+
+  useEffect(() => {
+  if (activeTab === 'items' && lostItems.length > 0) {
+    fetchResolvedClaims();
+  }
+}, [lostItems, activeTab]);
+
+const fetchResolvedClaims = async () => {
+  try {
+    const resolvedItems = lostItems.filter((item) => item.status === 'resolved');
+
+    if (resolvedItems.length === 0) {
+      setResolvedClaimsMap({});
+      return;
+    }
+
+    const results = await Promise.all(
+      resolvedItems.map(async (item) => {
+        try {
+          const res = await axios.get(`${API_URL}/claims/item/${item._id}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          return { itemId: item._id, claim: res.data };
+        } catch (err) {
+          return { itemId: item._id, claim: null };
+        }
+      })
+    );
+
+    const mappedClaims = {};
+    results.forEach(({ itemId, claim }) => {
+      mappedClaims[itemId] = claim;
+    });
+
+    setResolvedClaimsMap(mappedClaims);
+  } catch (err) {
+    console.error('Error fetching resolved claims:', err);
+  }
+};
 
   // Fetch claims
   useEffect(() => {
@@ -302,6 +343,23 @@ export default function AdminDashboard() {
       setNotification('Error exporting PDF');
     }
   };
+
+  const getClaimStatusStyle = (status) => {
+  if (status === "approved") return "bg-green-100 text-green-700 border border-green-200";
+  if (status === "rejected") return "bg-red-100 text-red-700 border border-red-200";
+  return "bg-yellow-100 text-yellow-700 border border-yellow-200";
+};
+
+const getItemTypeStyle = (type) => {
+  if (type === "found") return "bg-green-100 text-green-700 border border-green-200";
+  return "bg-red-100 text-red-700 border border-red-200";
+};
+
+const getItemStatusStyle = (status) => {
+  if (status === "resolved") return "bg-purple-100 text-purple-700 border border-purple-200";
+  if (status === "removed") return "bg-red-100 text-red-700 border border-red-200";
+  return "bg-blue-100 text-blue-700 border border-blue-200";
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -559,149 +617,509 @@ export default function AdminDashboard() {
 
         {/* Lost Items Tab */}
         {activeTab === 'items' && (
-          <div>
-            <div className="mb-6 flex space-x-4">
-              <select
-                value={itemFilter}
-                onChange={(e) => { setItemFilter(e.target.value); setItemsPage(1); }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">All Items</option>
-                <option value="active">Active</option>
-                <option value="resolved">Resolved</option>
-                <option value="removed">Removed</option>
-              </select>
-            </div>
+  <div>
+    <div className="mb-6 flex space-x-4">
+      <select
+        value={itemFilter}
+        onChange={(e) => {
+          setItemFilter(e.target.value);
+          setItemsPage(1);
+        }}
+        className="px-4 py-2 border border-gray-300 rounded-lg"
+      >
+        <option value="">All Items</option>
+        <option value="active">Active</option>
+        <option value="resolved">Resolved</option>
+        <option value="removed">Removed</option>
+      </select>
+    </div>
 
-            {itemsLoading ? (
-              <p className="text-center py-8">Loading...</p>
-            ) : lostItems.length > 0 ? (
-              <div className="space-y-4">
-                {lostItems.map((item) => (
-                  <div key={item._id} className="bg-white rounded-lg shadow p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                        <p className="text-gray-600 mt-1">{item.description}</p>
-                        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-500">Type</p>
-                            <p className="font-semibold text-gray-900 capitalize">{item.itemType}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Category</p>
-                            <p className="font-semibold text-gray-900 capitalize">{item.category}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Status</p>
-                            <p className="font-semibold text-gray-900 capitalize">{item.status}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Reported By</p>
-                            <p className="font-semibold text-gray-900">{item.reporter?.name}</p>
-                          </div>
+    {itemsLoading ? (
+      <p className="text-center py-8">Loading...</p>
+    ) : lostItems.length > 0 ? (
+      <div className="space-y-5">
+        {lostItems.map((item) => {
+          const collectorClaim = resolvedClaimsMap[item._id];
+
+          return (
+            <div
+              key={item._id}
+              className="bg-white rounded-[28px] shadow-sm border border-slate-200 hover:shadow-md transition p-6"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Image */}
+                <div className="lg:col-span-3">
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 h-full flex items-center justify-center">
+                    {item.images && item.images.length > 0 ? (
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        onClick={() => setPreviewImage(item.images[0])}
+                        className="w-full h-56 object-contain rounded-xl cursor-pointer hover:scale-105 transition"
+                      />
+                    ) : (
+                      <div className="text-slate-400 text-sm">No Image</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Main details */}
+                <div className="lg:col-span-6 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-2xl font-bold text-slate-800 break-words">
+                        {item.title}
+                      </h3>
+                      <p className="text-slate-600 mt-2 break-words">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    {item.flagged && (
+                      <div className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-sm font-semibold">
+                        ⚠️ Flagged
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Type
+                      </p>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${getItemTypeStyle(
+                          item.itemType
+                        )}`}
+                      >
+                        {item.itemType}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Status
+                      </p>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${getItemStatusStyle(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Category
+                      </p>
+                      <p className="text-base font-semibold text-slate-800 capitalize">
+                        {item.category}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Reporter
+                      </p>
+                      <p className="text-base font-semibold text-slate-800">
+                        {item.reporter?.name || 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Location
+                      </p>
+                      <p className="text-base font-semibold text-slate-800 break-words">
+                        {item.location || 'N/A'}
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                        Date of Incident
+                      </p>
+                      <p className="text-base font-semibold text-slate-800">
+                        {item.dateOfIncident
+                          ? new Date(item.dateOfIncident).toLocaleDateString()
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {item.status === 'resolved' && collectorClaim && (
+                    <div className="mt-4 bg-green-50 border border-green-200 rounded-2xl p-4">
+                      <h4 className="text-lg font-bold text-green-700 mb-3">
+                        Collector Details
+                      </h4>
+
+                      <div className="grid sm:grid-cols-2 gap-4 text-slate-700">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                            Name
+                          </p>
+                          <p className="font-medium">{collectorClaim.name || 'N/A'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                            Student ID
+                          </p>
+                          <p className="font-medium">{collectorClaim.studentId || 'N/A'}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                            Email
+                          </p>
+                          <p className="font-medium break-words">
+                            {collectorClaim.email || 'N/A'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                            Claim Status
+                          </p>
+                          <p className="font-medium capitalize">
+                            {collectorClaim.status || 'N/A'}
+                          </p>
                         </div>
                       </div>
-                      {item.flagged && (
-                        <div className="ml-4 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-semibold">
-                          ⚠️ Flagged
+
+                      {collectorClaim.idCardImage && (
+                        <div className="mt-4">
+                          <p className="text-sm font-semibold text-slate-700 mb-2">
+                            Student ID Card Photo
+                          </p>
+                          <div className="rounded-2xl border border-green-200 bg-white p-3 w-fit shadow-sm">
+                            <img
+                              src={collectorClaim.idCardImage}
+                              alt="Student ID Card"
+                              onClick={() => setPreviewImage(collectorClaim.idCardImage)}
+                              className="w-56 h-36 object-contain rounded-xl bg-slate-50 cursor-pointer hover:scale-105 transition"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
+
+                {/* Extra admin info */}
+                <div className="lg:col-span-3">
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-5 text-white h-full">
+                    <h4 className="text-lg font-bold mb-4">Admin View</h4>
+
+                    <div className="space-y-3 text-sm text-slate-200">
+                      <p>
+                        <span className="font-semibold text-white">Comments:</span>{' '}
+                        {item.comments?.length || 0}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-white">Views:</span>{' '}
+                        {item.views || 0}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-white">Flagged:</span>{' '}
+                        {item.flagged ? 'Yes' : 'No'}
+                      </p>
+                      {item.flagReason && (
+                        <p className="break-words">
+                          <span className="font-semibold text-white">Flag Reason:</span>{' '}
+                          {item.flagReason}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-center text-gray-500 py-8">No lost items found</p>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })}
+
+        <div className="mt-6 flex justify-center space-x-2">
+          <button
+            onClick={() => setItemsPage((p) => Math.max(1, p - 1))}
+            disabled={itemsPage === 1}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">{itemsPage} / {Math.ceil(itemsTotal / 10)}</span>
+          <button
+            onClick={() => setItemsPage((p) => p + 1)}
+            disabled={itemsPage >= Math.ceil(itemsTotal / 10)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    ) : (
+      <p className="text-center text-gray-500 py-8">No lost items found</p>
+    )}
+  </div>
+)}
 
         {/* Claims Tab */}
         {activeTab === 'claims' && (
-          <div>
-            <div className="mb-6 flex space-x-4">
-              <select
-                value={claimsStatusFilter}
-                onChange={(e) => { setClaimsStatusFilter(e.target.value); setClaimsPage(1); }}
-                className="px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">All Claims</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
+  <div>
+    <div className="mb-6 flex space-x-4">
+      <select
+        value={claimsStatusFilter}
+        onChange={(e) => {
+          setClaimsStatusFilter(e.target.value);
+          setClaimsPage(1);
+        }}
+        className="px-4 py-2 border border-gray-300 rounded-lg"
+      >
+        <option value="">All Claims</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+
+    {claimsLoading ? (
+      <p className="text-center py-8">Loading...</p>
+    ) : claims.length > 0 ? (
+      <div className="space-y-6">
+        {claims.map((claim) => (
+          <div
+            key={claim._id}
+            className="bg-white rounded-[28px] shadow-sm border border-slate-200 hover:shadow-md transition-all duration-300 overflow-hidden"
+          >
+            <div className="border-b border-slate-100 px-6 py-4 bg-slate-50/70">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Claim Review</h3>
+                  <p className="text-sm text-slate-500">
+                    Submitted by {claim.name}
+                  </p>
+                </div>
+
+                <span
+                  className={`inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold ${getClaimStatusStyle(
+                    claim.status
+                  )}`}
+                >
+                  {claim.status}
+                </span>
+              </div>
             </div>
-            {claimsLoading ? (
-              <p className="text-center py-8">Loading...</p>
-            ) : claims.length > 0 ? (
-              <div className="space-y-4">
-                {claims.map((claim) => (
-                  <div key={claim._id} className="bg-white rounded-lg shadow p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{claim.name}</h3>
-                        <p className="text-gray-600">Student ID: {claim.studentId}</p>
-                        <p className="text-gray-600">Email: {claim.email}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="text-gray-500">Item</p>
-                            <p className="font-semibold text-gray-900">{claim.itemId?.title}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Status</p>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              claim.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              claim.status === 'approved' ? 'bg-green-100 text-green-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {claim.status}
-                            </span>
-                          </div>
-                        </div>
-                        {claim.idCardImage && (
-                          <div className="mt-4">
-                            <p className="text-gray-500 text-sm mb-2">ID Card Image:</p>
-                            <img 
-                              src={claim.idCardImage} 
-                              alt="ID Card" 
-                              className="max-w-xs h-auto rounded border"
-                            />
-                          </div>
-                        )}
+
+            <div className="p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+              {/* Claimant Details */}
+              <div className="xl:col-span-4 bg-slate-50 rounded-2xl border border-slate-200 p-5">
+                <h4 className="text-lg font-bold text-slate-800 mb-4">
+                  Claimant Details
+                </h4>
+
+                <div className="space-y-3 text-slate-700">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Name
+                    </span>
+                    <span className="text-base font-medium">{claim.name}</span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Student ID
+                    </span>
+                    <span className="text-base font-medium">{claim.studentId}</span>
+                  </div>
+
+                  <div className="flex flex-col break-all">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Claim Email
+                    </span>
+                    <span className="text-base font-medium">{claim.email}</span>
+                  </div>
+
+                  {claim.userId?.name && (
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        User Account
+                      </span>
+                      <span className="text-base font-medium">{claim.userId.name}</span>
+                    </div>
+                  )}
+
+                  {claim.userId?.email && (
+                    <div className="flex flex-col break-all">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        Account Email
+                      </span>
+                      <span className="text-base font-medium">{claim.userId.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-sm font-semibold text-slate-700 mb-3">
+                    Student ID Card
+                  </p>
+
+                  {claim.idCardImage ? (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 w-fit shadow-sm">
+                      <img
+                        src={claim.idCardImage}
+                        alt="ID Card"
+                        onClick={() => setPreviewImage(claim.idCardImage)}
+                        className="w-56 h-36 object-contain rounded-xl bg-slate-50 cursor-pointer hover:scale-105 transition"
+                      />
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-slate-400 text-sm text-center">
+                      No ID card uploaded
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Claimed Item */}
+              <div className="xl:col-span-4 bg-slate-50 rounded-2xl border border-slate-200 p-5">
+                <h4 className="text-lg font-bold text-slate-800 mb-4">
+                  Claimed Item
+                </h4>
+
+                {claim.itemId ? (
+                  <div className="space-y-4">
+                    <div className="space-y-3 text-slate-700">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Title
+                        </span>
+                        <span className="text-base font-medium">
+                          {claim.itemId.title}
+                        </span>
                       </div>
-                      <div className="ml-4 space-y-2">
-                        {claim.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleClaimAction(claim, 'approved')}
-                              className="block w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm font-semibold"
-                            >
-                              <Check size={16} className="inline mr-1" /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleClaimAction(claim, 'rejected')}
-                              className="block w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-semibold"
-                            >
-                              <X size={16} className="inline mr-1" /> Reject
-                            </button>
-                          </>
-                        )}
-                        {claim.status !== 'pending' && (
-                          <span className="block text-center text-gray-500 text-sm">
-                            {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
-                          </span>
-                        )}
+
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Description
+                        </span>
+                        <span className="text-base font-medium break-words">
+                          {claim.itemId.description || "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Location
+                        </span>
+                        <span className="text-base font-medium">
+                          {claim.itemId.location || "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Category
+                        </span>
+                        <span className="text-base font-medium capitalize">
+                          {claim.itemId.category || "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold ${getItemTypeStyle(
+                            claim.itemId.itemType
+                          )}`}
+                        >
+                          {claim.itemId.itemType}
+                        </span>
+
+                        <span
+                          className={`inline-flex w-fit px-3 py-1 rounded-full text-sm font-semibold ${getItemStatusStyle(
+                            claim.itemId.status
+                          )}`}
+                        >
+                          {claim.itemId.status}
+                        </span>
                       </div>
                     </div>
+
+                    {claim.itemId.images && claim.itemId.images.length > 0 ? (
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 w-fit shadow-sm">
+                        <img
+                          src={claim.itemId.images[0]}
+                          alt="Claimed item"
+                          onClick={() => setPreviewImage(claim.itemId.images[0])}
+                          className="w-56 h-40 object-contain rounded-xl bg-slate-50 cursor-pointer hover:scale-105 transition"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-slate-400 text-sm text-center">
+                        No item image
+                      </div>
+                    )}
                   </div>
-                ))}
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-slate-400 text-sm text-center">
+                    Item details not available
+                  </div>
+                )}
               </div>
-            ) : (
-              <p className="text-center text-gray-500 py-8">No claims to review</p>
-            )}
+
+              {/* Actions */}
+              <div className="xl:col-span-4 flex flex-col">
+                <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl p-5 text-white h-full flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-lg font-bold mb-3">Actions</h4>
+                    <p className="text-sm text-slate-200 leading-6">
+                      Review the claimant information, compare the uploaded ID card
+                      with the claimed item details, and then decide whether to
+                      approve or reject the request.
+                    </p>
+                  </div>
+
+                  <div className="mt-8">
+                    {claim.status === "pending" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
+                        <button
+                          onClick={() => handleClaimAction(claim, "approved")}
+                          className="w-full px-5 py-3 rounded-2xl text-white font-semibold bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg transition"
+                        >
+                          Approve Claim
+                        </button>
+
+                        <button
+                          onClick={() => handleClaimAction(claim, "rejected")}
+                          className="w-full px-5 py-3 rounded-2xl text-white font-semibold bg-red-600 hover:bg-red-700 shadow-md hover:shadow-lg transition"
+                        >
+                          Reject Claim
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        className={`px-4 py-4 rounded-2xl text-center font-bold text-base shadow-sm ${
+                          claim.status === "approved"
+                            ? "bg-green-100 text-green-700 border border-green-300"
+                            : "bg-red-100 text-red-700 border border-red-300"
+                        }`}
+                      >
+                        {claim.status === "approved"
+                          ? "✅ Claim Approved"
+                          : "❌ Claim Rejected"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
+      </div>
+    ) : (
+      <p className="text-center text-gray-500 py-8">No claims to review</p>
+    )}
+  </div>
+)}
 
         {/* Groups Tab */}
         {activeTab === 'groups' && (
@@ -876,6 +1294,33 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {previewImage && (
+  <div
+    className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+    onClick={() => setPreviewImage(null)}
+  >
+    <div
+      className="relative max-w-4xl w-full px-4"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setPreviewImage(null)}
+        className="absolute top-2 right-6 bg-white text-black rounded-full w-10 h-10 text-lg font-bold shadow hover:bg-gray-100"
+      >
+        ✕
+      </button>
+
+      <div className="bg-white rounded-2xl p-4 shadow-2xl">
+        <img
+          src={previewImage}
+          alt="Preview"
+          className="w-full max-h-[80vh] object-contain rounded-xl"
+        />
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

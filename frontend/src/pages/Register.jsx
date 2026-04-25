@@ -20,6 +20,8 @@ export default function Register() {
     password: '',
     confirmPassword: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -355,32 +357,46 @@ export default function Register() {
                     />
                   </div>
 
-                  <div>
+                  <div className="relative">
                     <label className="block text-sm font-medium mb-2">Password *</label>
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       name="password"
                       value={passwordData.password}
                       onChange={handlePasswordChange}
                       placeholder="Minimum 6 characters"
-                className="input-field"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Use a strong password with mix of letters and numbers</p>
-            </div>
+                      className="input-field pr-24"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 mr-3 flex items-center text-sm font-medium text-primary-teal hover:text-primary-dark"
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                    <p className="text-xs text-gray-500 mt-1">Use a strong password with mix of letters and numbers</p>
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Confirm Password *</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-                placeholder="Confirm your password"
-                className="input-field"
-                required
-              />
-            </div>
+                  <div className="relative">
+                    <label className="block text-sm font-medium mb-2">Confirm Password *</label>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      placeholder="Confirm your password"
+                      className="input-field pr-24"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="absolute inset-y-0 right-0 mr-3 flex items-center text-sm font-medium text-primary-teal hover:text-primary-dark"
+                    >
+                      {showConfirmPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
 
             <button
               type="submit"

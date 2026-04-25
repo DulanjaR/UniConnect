@@ -369,7 +369,7 @@ const getItemStatusStyle = (status) => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-teal-100 mt-1">Welcome, {currentUser?.name}</p>
+              <p className="text-slate-200 mt-1 font-medium">Welcome, {currentUser?.name}</p>
             </div>
           </div>
         </div>

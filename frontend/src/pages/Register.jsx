@@ -195,8 +195,8 @@ export default function Register() {
           {/* Right Side - Form */}
           <div className="flex items-center justify-center px-4 py-8 overflow-y-auto">
             <div className="w-full max-w-md">
-              <h1 className="section-title-accent text-center mb-2">Join UniConnect</h1>
-              <p className="text-center text-gray-600 mb-6">Create your account</p>
+              <h1 className="text-3xl font-bold text-black text-center mb-2">Join UniConnect</h1>
+              <p className="text-center text-black mb-6">Create your account</p>
 
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

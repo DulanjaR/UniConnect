@@ -73,8 +73,8 @@ export default function Login() {
                 <p className="mt-1 text-sm text-slate-500">Live local time</p>
               </div>
 
-              <h1 className="section-title-accent text-center mb-2">Welcome to UniConnect</h1>
-              <p className="text-center text-gray-600 mb-8">Sign in to your account</p>
+              <h1 className="text-3xl font-bold text-black text-center mb-2">Welcome to UniConnect</h1>
+              <p className="text-center text-black mb-8">Sign in to your account</p>
 
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
